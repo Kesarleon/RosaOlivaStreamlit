@@ -23,13 +23,13 @@ Visualizar y analizar:
 
 ## Estructura del proyecto
 
-RosaOlivaApp/
-├── app.R
-├── global.R
-├── www/ # Archivos visuales: favicon, CSS, íconos
-├── modules/ # Código modular por hoja
-├── models/ # Modelos Huff y ML
-├── utils/ # Funciones auxiliares: inegi_denue, helpers
-├── data/ # Datos simulados (o reales si se cargan)
-├── README.md
+RosaOlivaApp/  
+├── app.R  
+├── global.R  
+├── www/ # Archivos visuales: favicon, CSS, íconos  
+├── modules/ # Código modular por hoja  
+├── models/ # Modelos Huff y ML  
+├── utils/ # Funciones auxiliares: inegi_denue, helpers  
+├── data/ # Datos simulados (o reales si se cargan)  
+├── README.md  
 
