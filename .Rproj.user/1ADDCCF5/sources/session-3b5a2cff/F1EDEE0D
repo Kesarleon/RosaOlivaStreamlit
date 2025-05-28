@@ -1,0 +1,26 @@
+{
+    "id": "F1EDEE0D",
+    "path": "~/Cesar/Kesar/RosaOliva/RosaOlivaGeoespacial/ROG_GPT_3/modules/mod_mapa.R",
+    "project_path": "modules/mod_mapa.R",
+    "type": "r_source",
+    "hash": "4240287152",
+    "contents": "",
+    "dirty": true,
+    "created": 1748373075110.0,
+    "source_on_save": false,
+    "relative_order": 4,
+    "properties": {
+        "source_window_id": "",
+        "Source": "Source",
+        "cursorPosition": "110,32",
+        "scrollLine": "104"
+    },
+    "folds": "",
+    "lastKnownWriteTime": 1748373278,
+    "encoding": "UTF-8",
+    "collab_server": "",
+    "source_window": "",
+    "last_content_update": 1748391338183,
+    "read_only": false,
+    "read_only_alternatives": []
+}

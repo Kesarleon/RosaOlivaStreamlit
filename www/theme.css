@@ -1,0 +1,89 @@
+/* www/theme.css */
+
+/* Color base */
+body, .skin-blue .main-header .logo {
+  background-color: #3d4d30 !important;
+  color: #ffffff !important;
+}
+
+/* Sidebar */
+.skin-blue .main-sidebar {
+  background-color: #5a6f3c !important;
+}
+.skin-blue .sidebar a {
+  color: #f1f1f1 !important;
+}
+.skin-blue .sidebar-menu>li.active>a {
+  background-color: #8ba45a !important;
+  color: #ffffff !important;
+  font-weight: bold;
+}
+
+/* Header */
+.skin-blue .main-header .navbar {
+  background-color: #4f6233 !important;
+}
+
+/* Box and tabs */
+.box {
+  border-top: 3px solid #8ba45a;
+}
+.nav-tabs-custom > .nav-tabs > li.active {
+  border-top-color: #8ba45a;
+}
+
+/* Botones */
+.btn-success {
+  background-color: #8ba45a !important;
+  border-color: #8ba45a !important;
+}
+.btn-success:hover {
+  background-color: #a0b86e !important;
+}
+
+/* Leaflet tweaks */
+.leaflet-container {
+  font: 12px/1.5 "Helvetica Neue", Arial, Helvetica, sans-serif;
+}
+.leaflet-control {
+  background-color: rgba(255,255,255,0.8);
+  border-radius: 4px;
+  box-shadow: 0 0 8px rgba(0,0,0,0.2);
+}
+
+/* Tablas */
+.table {
+  background-color: #ffffff;
+}
+
+/* Histograma */
+.plotly {
+  background-color: #f7f7f7;
+}
+
+/* Controles */
+.controls {
+  /* Appearance */
+  background-color: black;
+  padding: 0 20px 20px 20px;
+  cursor: move;
+  /* Fade out while not hovering */
+  opacity: 0.65;
+  zoom: 0.9;
+  transition: opacity 500ms 1s;
+}
+.controls:hover {
+  /* Fade in while hovering */
+  opacity: 0.95;
+  transition-delay: 0;
+}
+
+/* Titulares */
+h1, h2, h3 {
+  color: #3d4d30;
+}
+
+/* Personalización general */
+a {
+  color: #5d8d3f;
+}
