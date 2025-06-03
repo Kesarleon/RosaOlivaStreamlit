@@ -8,7 +8,7 @@ library(googleway)
 library(shinyjs)
 
 # ====== TOKEN DE GOOGLE (solo para funciones internas, no visible al usuario) ======
-token_google <- "3169f103-2c0b-4882-b817-d26a276b16c6"  # ← reemplaza con tu token real
+token_google <- Sys.getenv(GOOGLE_MAPS_TOKEN)  # ← reemplaza con tu token real
 
 # ====== FUNCIONES AUXILIARES ======
 

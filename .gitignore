@@ -1,1 +1,14 @@
-"*.dbf" 
+.Rhistory
+.RData
+.Rproj.user
+.Renviron
+*.dbf
+*.shp
+*.shx
+*.prj
+*.rds
+*.zip
+*.tar.gz
+data/agebs_oaxaca/
+token.txt
+

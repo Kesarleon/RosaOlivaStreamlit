@@ -13,7 +13,7 @@ source("modules/mod_huff.R")
 source("modules/mod_socio.R")
 source("modules/mod_agente.R")
 
-token_google_maps <- "3169f103-2c0b-4882-b817-d26a276b16c6"  # <- Reemplaza para uso real
+token_google_maps <- Sys.getenv("GOOGLE_MAPS_TOKEN")  # <- Reemplaza para uso real
 
 ui <- dashboardPage(
   dashboardHeader(title = "Rosa Oliva Geoespacial"),
