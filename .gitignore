@@ -11,4 +11,7 @@
 *.tar.gz
 data/agebs_oaxaca/
 token.txt
+backup
+data
+ROG_GPT_3.Rproj
 
