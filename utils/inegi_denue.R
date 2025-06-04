@@ -7,8 +7,9 @@ library(inegiR)
 library(httr)
 library(jsonlite)
 
+token_inegi <- Sys.getenv("INEGI_API_KEY")
 
-inegi_denue <- function(latitud, longitud, token = Sys.getenv(INEGI_API_KEY), meters = 250, keyword = "todos", timeout_sec = 60) {
+inegi_denue <- function(latitud, longitud, token = token_inegi , meters = 250, keyword = "todos", timeout_sec = 60) {
   
   # Verifica que las coordenadas estén dentro del territorio mexicano
   .EstaEnMexico <- function(lat, lon) {

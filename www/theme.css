@@ -1,12 +1,16 @@
 /* www/theme.css */
 
-/* Color base */
+/* ===== COLORES BASE Y TEXTO ===== */
 body, .skin-blue .main-header .logo {
   background-color: #3d4d30 !important;
   color: #ffffff !important;
 }
 
-/* Sidebar */
+body, h1, h2, h3, h4, h5, h6, p, label, .shiny-text-output, .control-label, .box-title {
+  color: #3d4d30 !important;
+}
+
+/* ===== SIDEBAR ===== */
 .skin-blue .main-sidebar {
   background-color: #5a6f3c !important;
 }
@@ -19,12 +23,12 @@ body, .skin-blue .main-header .logo {
   font-weight: bold;
 }
 
-/* Header */
+/* ===== HEADER ===== */
 .skin-blue .main-header .navbar {
   background-color: #4f6233 !important;
 }
 
-/* Box and tabs */
+/* ===== BOX Y TABS ===== */
 .box {
   border-top: 3px solid #8ba45a;
 }
@@ -32,16 +36,68 @@ body, .skin-blue .main-header .logo {
   border-top-color: #8ba45a;
 }
 
-/* Botones */
-.btn-success {
+/* ===== BOTONES ===== */
+.btn-success, .btn, .action-button, .btn-default {
   background-color: #8ba45a !important;
-  border-color: #8ba45a !important;
+  border-color: #6b7f45 !important;
+  color: #ffffff !important;
 }
-.btn-success:hover {
+.btn-success:hover, .btn:hover, .action-button:hover {
   background-color: #a0b86e !important;
+  border-color: #6b7f45 !important;
+  color: #ffffff !important;
 }
 
-/* Leaflet tweaks */
+/* ===== INPUTS Y SELECTORES ===== */
+.form-control, .selectize-input, .selectize-dropdown-content {
+  border-color: #6B8E23;
+  color: #3d4d30;
+  background-color: #f8f8f0;
+}
+
+/* ===== TABLAS ===== */
+.table {
+  background-color: #ffffff;
+}
+.table > thead > tr > th {
+  background-color: #6B8E23;
+  color: #ffffff;
+}
+.table > tbody > tr > td {
+  color: #3d4d30;
+}
+
+/* ===== HISTOGRAMA ===== */
+.plotly {
+  background-color: #f7f7f7;
+  color: #3d4d30;
+}
+
+/* ===== CONTROLES FLOTANTES ===== */
+.controls {
+  background-color: black;
+  padding: 0 20px 20px 20px;
+  cursor: move;
+  opacity: 0.65;
+  zoom: 0.9;
+  transition: opacity 500ms 1s;
+}
+.controls:hover {
+  opacity: 0.95;
+  transition-delay: 0;
+}
+
+/* ===== TITULARES ===== */
+h1, h2, h3, h4, h5, h6 {
+  color: #3d4d30;
+}
+
+/* ===== ENLACES ===== */
+a {
+  color: #5d8d3f;
+}
+
+/* ===== LEAFLET ===== */
 .leaflet-container {
   font: 12px/1.5 "Helvetica Neue", Arial, Helvetica, sans-serif;
 }
@@ -49,41 +105,4 @@ body, .skin-blue .main-header .logo {
   background-color: rgba(255,255,255,0.8);
   border-radius: 4px;
   box-shadow: 0 0 8px rgba(0,0,0,0.2);
-}
-
-/* Tablas */
-.table {
-  background-color: #ffffff;
-}
-
-/* Histograma */
-.plotly {
-  background-color: #f7f7f7;
-}
-
-/* Controles */
-.controls {
-  /* Appearance */
-  background-color: black;
-  padding: 0 20px 20px 20px;
-  cursor: move;
-  /* Fade out while not hovering */
-  opacity: 0.65;
-  zoom: 0.9;
-  transition: opacity 500ms 1s;
-}
-.controls:hover {
-  /* Fade in while hovering */
-  opacity: 0.95;
-  transition-delay: 0;
-}
-
-/* Titulares */
-h1, h2, h3 {
-  color: #3d4d30;
-}
-
-/* Personalización general */
-a {
-  color: #5d8d3f;
 }
