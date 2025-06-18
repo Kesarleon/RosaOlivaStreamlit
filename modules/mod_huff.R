@@ -35,8 +35,8 @@ mod_huff_server <- function(id) {
       data.frame(
         id = c("A", "B", "C"),
         nombre = c("Sucursal A", "Sucursal B", "Sucursal C"),
-        lat = c(17.06, 17.07, 17.05),
-        lng = c(-96.72, -96.73, -96.71),
+        lat = c(17.0788831, 17.07, 17.05),
+        lng = c(-96.7130538, -96.73, -96.71),
         atractivo = c(4.5, 4.0, 4.2) # Rating interno
       )
     })
