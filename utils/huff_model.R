@@ -1,6 +1,6 @@
 # Función para calcular captación con el modelo de Huff (datos simulados)
 # Para usar Google Places, descomenta la siguiente línea:
-# source('utils/google_places.R')
+source('utils/google_places.R')
 
 # models/modelo_huff.R
 # Modelo de Huff para estimar captación
