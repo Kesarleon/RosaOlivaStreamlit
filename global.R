@@ -26,11 +26,13 @@ if (file.exists("data/Oaxaca_grid/oaxaca_ZMO_grid.shp")) {
   agebs <- agebs %>% 
     mutate(
       id_hex = id_hx_x,
-      poblacion = if("poblacn" %in% names(.)) poblacn else if("poblacion" %in% names(.)) poblacion else 100,
-      escolaridad = if("esclrdd" %in% names(.)) esclrdd else if("escolaridad" %in% names(.)) escolaridad else 8,
-      ingreso = if("ingreso" %in% names(.)) ingreso else runif(nrow(.), 5000, 15000)
+      poblacion_total = pblcn_t,
+      joven_digital = log1p(jvn_dgt),
+      mama_emprendedora = log1p(mm_mprn),
+      mayorista_experimentado = log1p(myrst_x),
+      clientes_totales = log1p(cts_ttl),
     ) %>%
-    select(id_hex, poblacion, escolaridad, ingreso, geometry)
+    select(id_hex, poblacion_total, joven_digital, mama_emprendedora, mayorista_experimentado, clientes_totales, geometry)
   
   agebs_hex <- agebs
   

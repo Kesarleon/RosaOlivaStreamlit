@@ -47,11 +47,12 @@ mod_mapa_ui <- function(id) {
           ns("variable"),
           "Perfil del cliente:",
           choices = c(
-            "Emprendedor Joven Digital" = "poblacion", 
-            "Mamá Emprendedora" = "ingreso", 
-            "Mayorista Experimentado" = "escolaridad"
+            "Joven Digital" = "joven_digital", 
+            "Mamá Emprendedora" = "mama_emprendedora", 
+            "Mayorista Experimentado" = "mayorista_experimentado",
+            "Cliente Potencial" = "clientes_totales"
           ),
-          selected = "poblacion"
+          selected = "clientes_totales"
         ),
         plotOutput(ns("histograma"))
       )
@@ -173,7 +174,7 @@ mod_mapa_server <- function(id) {
           fillOpacity = 0.6,
           color = "white",
           weight = 1,
-          label = ~paste0("Población: ", poblacion, "<br>", 
+          label = ~paste0("Población: ", poblacion_total, "<br>", 
                           input$variable, ": ", round(variable_data, 2)),
           group = "hex"
         )
@@ -237,7 +238,7 @@ mod_mapa_server <- function(id) {
       }
       
       hist(variable_data, 
-           breaks = 20, 
+#           breaks = 20, 
            col = "#7A9E7E", 
            border = "white",
            main = "Distribución del Perfil Seleccionado", 
