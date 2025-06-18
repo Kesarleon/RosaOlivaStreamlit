@@ -2,7 +2,8 @@
 # Para usar Google Places, descomenta la siguiente línea:
 # source('utils/google_places.R')
 
-library(dplyr) # May not be strictly needed for the new function structure
+
+#library(dplyr) # May not be strictly needed for the new function structure
 library(geosphere)
 
 huff_model <- function(ag_lat, ag_lng, puntos, alfa = 1, beta = 2) {
@@ -20,10 +21,10 @@ huff_model <- function(ag_lat, ag_lng, puntos, alfa = 1, beta = 2) {
 
     # Evitar división por cero
     puntos$distancia[puntos$distancia == 0] <- 0.01 # small distance if same point
-
+    
     # Calcular utilidad con parámetros alfa y beta
     puntos$utilidad <- (puntos$atractivo ^ alfa) / (puntos$distancia ^ beta)
-
+    
     # Calcular probabilidades
     total_utilidad <- sum(puntos$utilidad, na.rm = TRUE)
     if (total_utilidad > 0) {

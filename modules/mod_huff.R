@@ -1,6 +1,8 @@
 # Módulo para cálculo de Huff entre sucursales y competencia
 
-source("../utils/huff_model.R", local = TRUE)
+
+source("utils/huff_model.R", local = TRUE)
+source("utils/google_places.R", local = TRUE) # Added this line
 
 mod_huff_ui <- function(id) {
   ns <- NS(id)
@@ -22,7 +24,7 @@ mod_huff_ui <- function(id) {
         DT::dataTableOutput(ns("tabla_resultados")),
         br(),
         h4("Mapa de análisis"),
-        leafletOutput(ns("mapa_huff"), height = 400)
+        leaflet::leafletOutput(ns("mapa_huff"), height = 400)
       )
     )
   )
@@ -32,186 +34,213 @@ mod_huff_server <- function(id) {
   moduleServer(id, function(input, output, session) {
     ns <- session$ns
     
-    # Datos de sucursales Rosa Oliva
+    if (Sys.getenv("GOOGLE_PLACES_API_KEY") == "") {
+      shiny::showNotification(
+        "Advertencia: GOOGLE_PLACES_API_KEY no configurada. Atractividad de competencia usará valores por defecto.",
+        type = "warning",
+        duration = NULL
+      )
+    }
+    
     sucursales_rosa <- reactive({
       data.frame(
         id = c("A", "B", "C"),
         nombre = c("Sucursal A", "Sucursal B", "Sucursal C"),
         lat = c(17.0788831, 17.07, 17.05),
         lng = c(-96.7130538, -96.73, -96.71),
-        atractivo = c(4.5, 4.0, 4.2) # Rating interno
+        atractivo = c(4.5, 4.0, 4.2),
+        stringsAsFactors = FALSE
       )
     })
     
-    # Datos de competencia
-    competencia <- reactive({
+    competencia_base <- reactive({
       data.frame(
         id = c("X", "Y", "Z"),
         nombre = c("Joyería X", "Joyería Y", "Joyería Z"),
         lat = c(17.065, 17.068, 17.052),
         lng = c(-96.725, -96.732, -96.713),
-        atractivo = c(4.1, 3.9, 4.3) # Simulado desde Google Places API
+        stringsAsFactors = FALSE
       )
     })
     
-    # AGEBS cercanas con población
-    agebs_data <- reactive({
-      if (exists("agebs_hex") && nrow(agebs_hex) > 0) {
-        # Usar datos reales si están disponibles
-        coords <- st_coordinates(st_centroid(agebs_hex))
-        data.frame(
-          cvegeo = agebs_hex$id_hex,
-          lat = coords[,2],
-          lng = coords[,1],
-          poblacion = agebs_hex$poblacion
+    competencia <- reactive({
+      df <- competencia_base()
+      if (nrow(df) == 0) return(df) # Return empty if no base competitors
+      
+      # Initialize atractivo column first
+      df$atractivo <- DEFAULT_RATING # Assuming DEFAULT_RATING is defined in google_places.R or use a numeric value like 3.0
+      
+      # Fetch ratings
+      # Using a simple loop for API calls to avoid overwhelming the API or complex reactive handling
+      for (i in 1:nrow(df)) {
+        # message(paste("Fetching rating for:", df$nombre[i])) # Debugging
+        rating <- get_google_place_rating(
+          place_name = df$nombre[i],
+          lat = df$lat[i],
+          lng = df$lng[i]
         )
+        df$atractivo[i] <- rating
+        # message(paste("Rating for", df$nombre[i], ":", rating)) # Debugging
+      }
+      return(df)
+    })
+    req(agebs_hex)
+    agebs_data <- reactive({
+      if (exists("agebs_hex") && is.data.frame(get("agebs_hex")) && nrow(get("agebs_hex")) > 0) {
+        local_agebs_hex <- get("agebs_hex")
+        tryCatch({
+          # Ensure the geometry column is correctly referenced, common names are 'geometry' or 'geom'
+          geom_col_name <- 'geometry'#names(which(sapply(local_agebs_hex, class) == "sfc"))[1]
+          if (is.na(geom_col_name)) stop("No sfc geometry column found in agebs_hex")
+          coords <- sf::st_coordinates(sf::st_centroid(local_agebs_hex[[geom_col_name]]))
+          data.frame(
+            cvegeo = local_agebs_hex$id_hex,
+            lat = coords[,2],
+            lng = coords[,1],
+            poblacion = local_agebs_hex$clientes_totales,
+            stringsAsFactors = FALSE
+          )
+        }, error = function(e){
+          shiny::showNotification(paste("Error procesando agebs_hex:", e$message), type="error")
+          data.frame(cvegeo=character(), lat=numeric(), lng=numeric(), poblacion=numeric(), stringsAsFactors = FALSE) # Return empty df on error
+        })
       } else {
-        # Datos simulados
         data.frame(
-          cvegeo = paste0("AGB", 1:20),
+          cvegeo = paste0("AGBSIM", 1:20),
           lat = runif(20, 17.04, 17.08),
           lng = runif(20, -96.74, -96.70),
-          poblacion = sample(200:1500, 20, replace = TRUE)
+          poblacion = sample(200:1500, 20, replace = TRUE),
+          stringsAsFactors = FALSE
         )
       }
     })
     
-    # Cálculo de resultados
+
+# Cálculo de resultados
+
     resultados <- eventReactive(input$calcular, {
-      req(input$sucursal)
+      req(input$sucursal, agebs_data(), competencia())
+      
+      if(nrow(agebs_data()) == 0){
+        shiny::showNotification("No hay datos de AGEBs disponibles para el cálculo.", type="error")
+        return(data.frame(Error = "Datos de AGEBs no disponibles", stringsAsFactors = FALSE))
+      }
+      
+      id_calc_notif <- shiny::showNotification("Calculando captación...", type = "message", duration = NULL)
+      on.exit(shiny::removeNotification(id_calc_notif), add = TRUE)
       
       tryCatch({
-        # Seleccionar sucursal
-        suc_sel <- sucursales_rosa() %>%
-          filter(nombre == input$sucursal)
+        suc_sel <- sucursales_rosa() %>% dplyr::filter(nombre == input$sucursal)
+        if (nrow(suc_sel) == 0) stop("Sucursal seleccionada no encontrada.")
         
-        if (nrow(suc_sel) == 0) {
-          return(data.frame(Error = "Sucursal no encontrada"))
-        }
+        comp_data <- competencia()
+        todos_puntos <- dplyr::bind_rows(suc_sel %>% dplyr::mutate(tipo = "Rosa Oliva"),
+                                         comp_data %>% dplyr::mutate(tipo = "Competencia"))
         
-        # Unir competencia + sucursal seleccionada
-        todos_puntos <- bind_rows(
-          suc_sel %>% mutate(tipo = "Rosa Oliva"),
-          competencia() %>% mutate(tipo = "Competencia")
-        )
+        current_agebs <- agebs_data()
         
-        # Aplicar modelo a cada AGEB
-        agebs <- agebs_data()
+        resultados_list <- lapply(1:nrow(current_agebs), function(i) {
+          res_huff <- huff_model(current_agebs$lat[i], current_agebs$lng[i], todos_puntos, input$alfa, input$beta)
+          cbind(cvegeo = current_agebs$cvegeo[i],
+                poblacion = current_agebs$poblacion[i],
+                agebs_lat = current_agebs$lat[i],
+                agebs_lng = current_agebs$lng[i],
+                res_huff,
+                stringsAsFactors = FALSE)
+        })
+        resultados_detalle <- dplyr::bind_rows(resultados_list)
         
-        resultados_detalle <- agebs %>%
-          rowwise() %>%
-          mutate(
-            resultado_huff = list(huff_model(lat, lng, todos_puntos, input$alfa, input$beta))
-          ) %>%
-          unnest(resultado_huff) %>%
-          ungroup()
+        total_poblacion_agebs <- sum(current_agebs$poblacion, na.rm = TRUE)
+        if(total_poblacion_agebs == 0) stop("La población total de los AGEBs es cero.")
         
-        # Calcular captación por sucursal
         captacion_resumen <- resultados_detalle %>%
-          group_by(nombre, tipo) %>%
-          summarise(
+          dplyr::group_by(id, nombre, tipo) %>%
+          dplyr::summarise(
             captacion_total = sum(prob * poblacion, na.rm = TRUE),
-            participacion = round(captacion_total / sum(poblacion) * 100, 2),
-            agebs_influencia = n_distinct(cvegeo),
+            participacion = round((sum(prob * poblacion, na.rm = TRUE) / total_poblacion_agebs) * 100, 2),
+            agebs_influencia = dplyr::n_distinct(cvegeo[prob > 0]), # Count only AGEBs with some probability
             .groups = "drop"
           ) %>%
-          arrange(desc(captacion_total))
+          dplyr::arrange(desc(captacion_total))
         
-        # Guardar detalles para el mapa
         session$userData$resultados_detalle <- resultados_detalle
-        
         return(captacion_resumen)
         
       }, error = function(e) {
-        showNotification(paste("Error en cálculo:", e$message), type = "error")
-        return(data.frame(Error = paste("Error:", e$message)))
+        shiny::showNotification(paste("Error en cálculo:", e$message), type = "error", duration = 10)
+        message("Error en eventReactive resultados: ", e$message) # Console log for debugging
+        return(data.frame(Error = e$message, stringsAsFactors = FALSE))
       })
     })
     
-    # Tabla de resultados
     output$tabla_resultados <- DT::renderDataTable({
-      req(resultados())
-      
-      if ("Error" %in% names(resultados())) {
-        DT::datatable(resultados(), options = list(pageLength = 5, dom = 't'))
+      res <- resultados()
+      req(res)
+      if ("Error" %in% names(res)) {
+        DT::datatable(res[, "Error", drop=FALSE], options = list(dom = 't'))
       } else {
         DT::datatable(
-          resultados() %>%
-            select(
-              Negocio = nombre,
-              Tipo = tipo,
-              `Captación estimada` = captacion_total,
-              `Participación (%)` = participacion,
-              `AGEBs influencia` = agebs_influencia
-            ),
-          options = list(pageLength = 10, dom = 'ft'),
-          rownames = FALSE
-        ) %>%
-          DT::formatRound(c("Captación estimada"), digits = 0) %>%
-          DT::formatStyle(
-            "Tipo",
-            backgroundColor = DT::styleEqual("Rosa Oliva", "#e8f5e8")
-          )
+          res %>% dplyr::select(Negocio = nombre, Tipo = tipo, `Captación estimada` = captacion_total,
+                                `Participación (%)` = participacion, `AGEBs influencia` = agebs_influencia),
+          options = list(pageLength = 10, dom = 'Bfrtip', buttons = c('copy', 'csv', 'excel')),
+          rownames = FALSE, extensions = 'Buttons'
+        ) %>% DT::formatRound(c("Captación estimada"), digits = 0)
       }
     })
     
-    # Mapa de resultados
-    output$mapa_huff <- renderLeaflet({
-      leaflet() %>%
-        addProviderTiles("CartoDB.Positron") %>%
-        setView(lng = -96.72, lat = 17.06, zoom = 12)
+    output$mapa_huff <- leaflet::renderLeaflet({
+      leaflet::leaflet() %>%
+        leaflet::addProviderTiles("CartoDB.Positron") %>%
+        leaflet::setView(lng = -96.72, lat = 17.06, zoom = 13)
     })
     
-    # Actualizar mapa cuando hay resultados
     observe({
-      req(resultados())
+      res_data_map <- resultados()
+      req(res_data_map)
       
-      if (!"Error" %in% names(resultados()) && !is.null(session$userData$resultados_detalle)) {
-        detalle <- session$userData$resultados_detalle
+      if (!"Error" %in% names(res_data_map) && !is.null(session$userData$resultados_detalle)) {
+        detalle_map <- session$userData$resultados_detalle
+        suc_sel_nombre_map <- input$sucursal
         
-        # Datos para Rosa Oliva
-        rosa_data <- detalle %>% filter(tipo == "Rosa Oliva")
+        ageb_perf_selected_store_map <- detalle_map %>%
+          dplyr::filter(nombre == suc_sel_nombre_map & tipo == "Rosa Oliva")
         
-        # Crear paleta de colores para probabilidad
-        if (nrow(rosa_data) > 0) {
-          pal <- colorNumeric("Reds", domain = rosa_data$prob)
+        # Ensure leafletProxy is called with data if it's going to be used in chained expressions
+        proxy <- leaflet::leafletProxy("mapa_huff", data = ageb_perf_selected_store_map)
+        proxy %>% leaflet::clearMarkers() %>% leaflet::clearShapes() %>% leaflet::clearControls()
+        
+        if (nrow(ageb_perf_selected_store_map) > 0) {
+          pal <- leaflet::colorNumeric("Reds", domain = ageb_perf_selected_store_map$prob, na.color = "transparent")
           
-          leafletProxy("mapa_huff") %>%
-            clearMarkers() %>%
-            clearShapes() %>%
-            # Agregar sucursales
-            addMarkers(
+          proxy %>%
+            leaflet::addMarkers(
               data = sucursales_rosa(),
               lng = ~lng, lat = ~lat,
-              popup = ~paste("<b>", nombre, "</b><br>Atractivo:", atractivo),
-              icon = list(iconUrl = "https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-red.png",
-                          iconWidth = 25, iconHeight = 41)
+              popup = ~paste0("<b>", nombre, "</b><br>Atractivo (interno): ", atractivo),
+              layerId = ~paste0("suc_", id),
+              icon = leaflet::makeIcon(iconUrl = "https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-red.png", iconWidth = 25, iconHeight = 41)
             ) %>%
-            # Agregar competencia
-            addMarkers(
+            leaflet::addMarkers(
               data = competencia(),
               lng = ~lng, lat = ~lat,
-              popup = ~paste("<b>", nombre, "</b><br>Atractivo:", atractivo),
-              icon = list(iconUrl = "https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-blue.png",
-                          iconWidth = 25, iconHeight = 41)
+              popup = ~paste0("<b>", nombre, "</b><br>Atractivo (Google): ", round(atractivo, 2)),
+              layerId = ~paste0("comp_",id),
+              icon = leaflet::makeIcon(iconUrl = "https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-blue.png", iconWidth = 25, iconHeight = 41)
             ) %>%
-            # Agregar círculos por AGEB con intensidad de captación
-            addCircleMarkers(
-              data = rosa_data,
-              lng = ~lng, lat = ~lat,
-              radius = ~sqrt(poblacion) / 10,
+            leaflet::addCircleMarkers(
+              lng = ~agebs_lng, lat = ~agebs_lat,
+              radius = ~sqrt(poblacion) / 1, # Adjusted radius slightly
               color = ~pal(prob),
-              fillOpacity = 0.7,
-              stroke = TRUE,
-              popup = ~paste("<b>AGEB:", cvegeo, "</b><br>",
-                             "Población:", poblacion, "<br>",
-                             "Probabilidad captación:", round(prob * 100, 1), "%")
+              fillOpacity = 0.6,
+              stroke = TRUE, weight = 1,
+              layerId = ~paste0("ageb_",cvegeo),
+              popup = ~paste0("<b>AGEB: ", cvegeo, "</b><br>Población: ", poblacion,
+                              "<br>Prob. captación (", suc_sel_nombre_map, "): ", round(prob * 100, 1), "%")
             ) %>%
-            addLegend(
-              position = "bottomright",
-              pal = pal,
-              values = rosa_data$prob,
-              title = "Prob. Captación<br>Rosa Oliva"
+            leaflet::addLegend(
+              position = "bottomright", pal = pal, values = ~prob,
+              title = paste0("Prob. Captación<br>", suc_sel_nombre_map), opacity = 1,
+              layerId = "legend_huff"
             )
         }
       }

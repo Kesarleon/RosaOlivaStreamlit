@@ -10,7 +10,7 @@ library(DT)
 library(geosphere)
 
 # ====== TOKEN DE GOOGLE (solo para funciones internas, no visible al usuario) ======
-token_google <- Sys.getenv("GOOGLE_MAPS_TOKEN")  # ← Corregido: agregadas comillas
+token_google <- Sys.getenv("GOOGLE_PLACES_API_KEY")  # ← Corregido: agregadas comillas
 token_inegi <- Sys.getenv("INEGI_API_KEY")
 # ====== FUNCIONES AUXILIARES ======
 
@@ -69,3 +69,6 @@ if (file.exists("data/Oaxaca_grid/oaxaca_ZMO_grid.shp")) {
   
   agebs <- agebs_hex
 }
+
+agebs <- st_read("data/Oaxaca_grid/oaxaca_ZMO_grid.shp", quiet = TRUE)
+agebs %>% class()
