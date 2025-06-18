@@ -1,5 +1,7 @@
 # Módulo para cálculo de Huff entre sucursales y competencia
 
+source("../utils/huff_model.R", local = TRUE)
+
 mod_huff_ui <- function(id) {
   ns <- NS(id)
   tagList(
@@ -73,37 +75,6 @@ mod_huff_server <- function(id) {
         )
       }
     })
-    
-    # Función del modelo de Huff mejorada
-    huff_model <- function(ag_lat, ag_lng, puntos, alfa = 1, beta = 2) {
-      tryCatch({
-        # Calcular distancias usando geosphere para mayor precisión
-        puntos$distancia <- geosphere::distHaversine(
-          cbind(puntos$lng, puntos$lat),
-          c(ag_lng, ag_lat)
-        ) / 1000  # Convertir a km
-        
-        # Evitar división por cero
-        puntos$distancia[puntos$distancia == 0] <- 0.01
-        
-        # Calcular utilidad con parámetros alfa y beta
-        puntos$utilidad <- (puntos$atractivo ^ alfa) / (puntos$distancia ^ beta)
-        
-        # Calcular probabilidades
-        total_utilidad <- sum(puntos$utilidad, na.rm = TRUE)
-        if (total_utilidad > 0) {
-          puntos$prob <- puntos$utilidad / total_utilidad
-        } else {
-          puntos$prob <- rep(1/nrow(puntos), nrow(puntos))
-        }
-        
-        return(puntos)
-      }, error = function(e) {
-        warning(paste("Error en modelo Huff:", e$message))
-        puntos$prob <- rep(0, nrow(puntos))
-        return(puntos)
-      })
-    }
     
     # Cálculo de resultados
     resultados <- eventReactive(input$calcular, {
