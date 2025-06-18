@@ -1,5 +1,10 @@
 # global.R - Configuraciones generales y generación de datos simulados
 
+options(repos = c(
+  RSPM = "https://packagemanager.posit.co/cran/latest"
+))
+
+
 library(tidyverse)
 library(leaflet)
 library(sf)
