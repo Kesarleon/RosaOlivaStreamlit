@@ -1,5 +1,7 @@
+library(sf)
+
 # Cargar shapefile
-shp_path <- list.files("data/agebs_oaxaca/conjunto_de_datos", pattern = "\\.shp$", full.names = TRUE)
+shp_path <- list.files("../data/agebs_oaxaca/conjunto_de_datos", pattern = "\\.shp$", full.names = TRUE)
 agebs_oax <- st_read(shp_path[1], quiet = TRUE)
 
 # ZMO ####
@@ -35,18 +37,35 @@ agebs_oax <- agebs_oax %>%
   filter(CVE_MUN %in% mun_zmo) 
 
 
+
 # Cargar datos de población (asume que viene en el DBF o archivo separado)
 # Puedes adaptar esta parte si ya tienes población en otro archivo
 # Por ejemplo:
-pob_data <- read_csv("data/Pruebas/poboax.csv")
+#pob_data <- read.csv("../data/Pruebas/poboax.csv")
+pob_data <- readRDS('data/perfiles.rds')
+pob_data %>% glimpse()
+
 agebs_oax <- left_join(agebs_oax, pob_data, by = "CVEGEO")
+
+agebs_oax <- agebs_oax %>% 
+  filter(!is.na(POBTOT))
+
+agebs_oax %>% glimpse()
+
+#### Missing values ----
+library(DataExplorer)
+
+agebs_oax %>% 
+  filter(is.na(POBTOT))
+
+####
 
 agebs_oax <- agebs_oax %>%
   mutate(
     mercado_potencial = (
       #      0.4 * POBTOT +
       #        0.6 * P_15A49_F
-      POBTOT
+      estimado_ctes_total
     )
   )
 
@@ -75,18 +94,28 @@ interseccion <- st_intersection(st_make_valid(hex_grid), st_make_valid(agebs_oax
 interseccion <- interseccion %>%
   mutate(area_inter = st_area(.)) %>%
   group_by(id_hex) %>%
-  summarise(poblacion = sum(as.numeric(mercado_potencial), na.rm = TRUE),
-            ingreso = sum(as.numeric(POBFEM), na.rm = TRUE),
-            escolaridad = sum(as.numeric(P_15A49_F), na.rm = TRUE))
+  summarise(poblacion_total = sum(as.numeric(POBTOT), na.rm = TRUE),
+            joven_digital = sum(as.numeric(estimado_ctes_joven), na.rm = TRUE),
+            mama_emprendedora = sum(as.numeric(estimado_ctes_mama), na.rm = TRUE),
+            mayorista_experimentado = sum(as.numeric(estimado_ctes_mayorista), na.rm = TRUE),
+            ctes_total = sum(as.numeric(estimado_ctes_total), na.rm = TRUE)
+            )
 
 
 # Unir población al grid original
 hex_grid <- st_join(hex_grid, interseccion, by = "id_hex")
 hex_grid <- hex_grid %>% filter(!is.na(id_hex.y))
-hex_grid$poblacion[is.na(hex_grid$poblacion)] <- 0
-hex_grid$escolaridad[is.na(hex_grid$escolaridad)] <- 0
-hex_grid$ingreso[is.na(hex_grid$ingreso)] <- 0
+
+hex_grid$poblacion_total[is.na(hex_grid$poblacion_total)] <- 0
+hex_grid$joven_digital[is.na(hex_grid$joven_digital)] <- 0
+hex_grid$mama_emprendedora[is.na(hex_grid$mama_emprendedora)] <- 0
+hex_grid$mayorista_experimentado[is.na(hex_grid$mayorista_experimentado)] <- 0
+hex_grid$ctes_total[is.na(hex_grid$ctes_total)] <- 0
 
 hex_grid <- hex_grid %>% st_transform('+proj=longlat +datum=WGS84')
 
 st_write(hex_grid, "data/Oaxaca_grid/oaxaca_ZMO_grid.shp")
+
+hex_grid %>% glimpse()
+
+hex_grid %>% summary()

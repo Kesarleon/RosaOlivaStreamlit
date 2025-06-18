@@ -6,56 +6,66 @@ library(sf)
 library(jsonlite)
 library(googleway)
 library(shinyjs)
+library(DT)
+library(geosphere)
 
 # ====== TOKEN DE GOOGLE (solo para funciones internas, no visible al usuario) ======
-token_google <- Sys.getenv(GOOGLE_MAPS_TOKEN)  # ← reemplaza con tu token real
-
+token_google <- Sys.getenv("GOOGLE_MAPS_TOKEN")  # ← Corregido: agregadas comillas
+token_inegi <- Sys.getenv("INEGI_API_KEY")
 # ====== FUNCIONES AUXILIARES ======
 
-# Simular función inegi_denue
-
+# Cargar función inegi_denue
 source('utils/inegi_denue.R')
-#inegi_denue <- function(lat, lng, palabra_clave, radio_m) {
-#  # Generar 10 negocios simulados aleatorios
-#  tibble(
-#    nombre = paste(palabra_clave, 1:10),
-#    lat = jitter(rep(lat, 10), amount = 0.01),
-#    lng = jitter(rep(lng, 10), amount = 0.01),
-#    categoria = palabra_clave,
-#    rating = runif(10, 3, 5)
-#  )
-#}
 
-# Simular objeto 'agebs' con variables socioeconómicas
-#agebs <- st_as_sf(
-#  tibble(
-#    cvegeo = paste0("AG", 1:100),
-#    poblacion = sample(100:1000, 100, replace = TRUE),
-#    ingreso = runif(100, 2000, 10000),
-#    escolaridad = runif(100, 0, 1),
-#    lat = runif(100, 17.03, 17.13),
-#    lng = runif(100, -96.77, -96.67)
-#  ),
-#  coords = c("lng", "lat"),
-#  crs = 4326
-#)
-
-# Crear hexágonos ficticios para mapa
-#library(geogrid)
-#
-#hex_grid <- calculate_grid(agebs_oax, grid_type = "hexagon", seed = 1)
-#agebs_hex <- assign_polygons(agebs_oax, hex_grid)
-#agebs_hex$poblacion <- agebs$poblacion
-#plot(hex_grid)
-
-# ====== CARGA DE DATOS REALES (comentada) ======
- agebs <- st_read("data/Oaxaca_grid/oaxaca_ZMO_grid.shp", quiet = TRUE)
-# negocios <- read_csv("datos/denue.csv")
-# clientes <- read_csv("datos/clientes.csv")
-# ratings <- read_csv("datos/ratings.csv")
- agebs <- agebs %>% 
-   mutate(poblacion = poblacn,
-          escolaridad = esclrdd)
-   
- agebs_hex <- agebs
-
+# ====== CARGA DE DATOS REALES ======
+# Verificar si existe el archivo antes de cargarlo
+if (file.exists("data/Oaxaca_grid/oaxaca_ZMO_grid.shp")) {
+  agebs <- st_read("data/Oaxaca_grid/oaxaca_ZMO_grid.shp", quiet = TRUE)
+  
+  # Estandarizar nombres de columnas
+  agebs <- agebs %>% 
+    mutate(
+      id_hex = id_hx_x,
+      poblacion_total = pblcn_t,
+      joven_digital = log1p(jvn_dgt),
+      mama_emprendedora = log1p(mm_mprn),
+      mayorista_experimentado = log1p(myrst_x),
+      clientes_totales = log1p(cts_ttl),
+    ) %>%
+    select(id_hex, poblacion_total, joven_digital, mama_emprendedora, mayorista_experimentado, clientes_totales, geometry)
+  
+  agebs_hex <- agebs
+  
+} else {
+  # Crear datos simulados si no existe el archivo
+  warning("No se encontró el archivo de datos. Usando datos simulados.")
+  
+  # Crear hexágonos simulados
+  n_hex <- 50
+  hex_coords <- data.frame(
+    lng = runif(n_hex, -96.75, -96.69),
+    lat = runif(n_hex, 17.04, 17.11)
+  )
+  
+  # Crear polígonos hexagonales simples (círculos para simplicidad)
+  hex_polys <- lapply(1:n_hex, function(i) {
+    center <- c(hex_coords$lng[i], hex_coords$lat[i])
+    angles <- seq(0, 2*pi, length.out = 7)
+    radius <- 0.002
+    coords <- cbind(
+      center[1] + radius * cos(angles),
+      center[2] + radius * sin(angles)
+    )
+    st_polygon(list(coords))
+  })
+  
+  agebs_hex <- st_sf(
+    id_hex = 1:n_hex,
+    poblacion = sample(100:1000, n_hex, replace = TRUE),
+    escolaridad = runif(n_hex, 6, 12),
+    ingreso = runif(n_hex, 5000, 15000),
+    geometry = st_sfc(hex_polys, crs = 4326)
+  )
+  
+  agebs <- agebs_hex
+}
