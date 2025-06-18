@@ -56,7 +56,7 @@ mod_huff_server <- function(id) {
     competencia_base <- reactive({
       data.frame(
         id = c("X", "Y", "Z"),
-        nombre = c("Joyería X", "Joyería Y", "Joyería Z"),
+        nombre = c("Joyería Nice", "Joyería Sublime", "Joyería Ag 925"),
         lat = c(17.065, 17.068, 17.052),
         lng = c(-96.725, -96.732, -96.713),
         stringsAsFactors = FALSE
