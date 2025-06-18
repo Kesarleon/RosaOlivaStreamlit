@@ -1,5 +1,6 @@
 # Módulo para cálculo de Huff entre sucursales y competencia
 
+
 source("utils/huff_model.R", local = TRUE)
 source("utils/google_places.R", local = TRUE) # Added this line
 
@@ -114,6 +115,9 @@ mod_huff_server <- function(id) {
       }
     })
     
+
+# Cálculo de resultados
+
     resultados <- eventReactive(input$calcular, {
       req(input$sucursal, agebs_data(), competencia())
       

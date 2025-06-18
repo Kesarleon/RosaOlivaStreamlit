@@ -1,6 +1,7 @@
 # Función para calcular captación con el modelo de Huff (datos simulados)
 # Para usar Google Places, descomenta la siguiente línea:
-source('utils/google_places.R')
+# source('utils/google_places.R')
+
 
 #library(dplyr) # May not be strictly needed for the new function structure
 library(geosphere)
@@ -10,14 +11,14 @@ huff_model <- function(ag_lat, ag_lng, puntos, alfa = 1, beta = 2) {
   # ag_lat, ag_lng: latitude and longitude of the current demand point (e.g., AGEB)
   # alfa: attraction parameter
   # beta: distance friction parameter
-  
+
   tryCatch({
     # Calculate distances using geosphere for mayor precision
     puntos$distancia <- geosphere::distHaversine(
       cbind(puntos$lng, puntos$lat),
       c(ag_lng, ag_lat)
     ) / 1000  # Convertir a km
-    
+
     # Evitar división por cero
     puntos$distancia[puntos$distancia == 0] <- 0.01 # small distance if same point
     
@@ -34,7 +35,7 @@ huff_model <- function(ag_lat, ag_lng, puntos, alfa = 1, beta = 2) {
       # Matching mod_huff.R behavior:
       puntos$prob <- rep(1/nrow(puntos), nrow(puntos))
     }
-    
+
     return(puntos)
   }, error = function(e) {
     warning(paste("Error in huff_model:", e$message))
