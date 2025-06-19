@@ -150,11 +150,11 @@ oaxaca_ageb_pca_input <- oaxaca_censo %>%
 
 # If data needs aggregation (e.g., from manzana to AGEB), it would be done here.
 # Example (if it were needed):
-# oaxaca_ageb_pca_input <- oaxaca_ageb_pca_input %>%
-#   group_by(CVEGEO, NOM_ENT, NOM_MUN, NOM_LOC, AGEB) %>%
-#   summarise(across(all_of(c(vars_joven, vars_mama, vars_mayorista)),
-#                    ~sum(., na.rm = TRUE)), # Summing variables for aggregation
-#             .groups = 'drop')
+ oaxaca_ageb_pca_input <- oaxaca_ageb_pca_input %>%
+   group_by(CVEGEO, NOM_ENT, NOM_MUN, NOM_LOC, AGEB) %>%
+   summarise(across(all_of(c(vars_joven, vars_mama, vars_mayorista)),
+                    ~sum(., na.rm = TRUE)), # Summing variables for aggregation
+             .groups = 'drop')
 
 # --- Perform PCA for Each Profile ---
 # Joven Digital: Note VPH_SINTIC is used inversely (multiplied by -1)
