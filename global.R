@@ -24,23 +24,23 @@ APP_CONFIG <- list(
   default_lng = -96.7216,
   oaxaca_grid_filepath = "data/Oaxaca_grid/oaxaca_ZMO_grid.shp",
   huff_default_alfa = 1,
-  huff_default_beta = 2,
+  huff_default_beta = 3,
   map_search_radius_default = 1000,
-  map_search_keyword_default = "joyería",
-  socio_search_keyword_default = "joyería", # Can be different from map_search_keyword_default if needed
+  map_search_keyword_default = "joyeria",
+  socio_search_keyword_default = "joyeria", # Can be different from map_search_keyword_default if needed
   sucursales_rosa_data = data.frame(
     id = c("A", "B", "C"),
     nombre = c("Sucursal A", "Sucursal B", "Sucursal C"),
-    lat = c(17.0788831, 17.07, 17.05),
-    lng = c(-96.7130538, -96.73, -96.71),
-    atractivo = c(4.5, 4.0, 4.2), # Example attractiveness scores
+    lat = c(17.078904, 17.07, 17.05),
+    lng = c(-96.710641, -96.73, -96.71),
+    atractivo = c(4.0, 4.0, 4.2), # Example attractiveness scores
     stringsAsFactors = FALSE
   ),
   competencia_base_data = data.frame(
     id = c("X", "Y", "Z"),
     nombre = c("Joyería Nice", "Joyería Sublime", "Joyería Ag 925"),
-    lat = c(17.065, 17.068, 17.052),
-    lng = c(-96.725, -96.732, -96.713),
+    lat = c(17.078891, 17.078206, 17.080318),
+    lng = c(-96.710177, -96.710654, -96.713559),
     stringsAsFactors = FALSE
   )
 )
