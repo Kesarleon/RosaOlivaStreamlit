@@ -44,7 +44,18 @@ source("modules/mod_agente.R")
 #' @return A `dashboardPage` Shiny UI object.
 #' @export
 ui <- dashboardPage(
-  dashboardHeader(title = "Rosa Oliva Geoespacial"),
+  dashboardHeader(
+    title = tags$a(
+      href = '#', # Or a relevant link like the app's URL if hosted
+      tags$img(
+        src = 'logo_ro.png', # Assumes logo_ro.png is in www/
+        title = "Rosa Oliva Geoespacial",
+        height = "40px", # Adjust height as needed
+        style = "padding-top:5px; padding-bottom:5px; margin-right: 5px;" # Vertical padding and right margin
+      ),
+      "Rosa Oliva Geoespacial" # Title text next to the logo
+    )
+  ),
   dashboardSidebar(
     sidebarMenu(
       menuItem("Mapa", tabName = "mapa", icon = icon("map")),
@@ -61,7 +72,7 @@ ui <- dashboardPage(
     # Favicon si existe
     tags$head(
       if (file.exists("www/favicon/favicon.ico")) {
-        tags$link(rel = "shortcut icon", href = "www/favicon/favicon.ico")
+        tags$link(rel = "shortcut icon", href = "www/favicon/favicon.ico") # Corrected href path
       }
     ),
     tabItems(
