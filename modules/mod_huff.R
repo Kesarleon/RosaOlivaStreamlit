@@ -191,7 +191,7 @@ mod_huff_server <- function(id) {
           dplyr::summarise(
             captacion_total = sum(prob * poblacion, na.rm = TRUE),
             participacion = round((sum(prob * poblacion, na.rm = TRUE) / total_poblacion_agebs) * 100, 2),
-            agebs_influencia = dplyr::n_distinct(cvegeo[prob > 0 & is.finite(prob)]),
+            agebs_influencia = dplyr::n_distinct(cvegeo[prob > 0.4 & is.finite(prob)]),
             .groups = "drop"
           ) %>%
           dplyr::arrange(desc(captacion_total))
