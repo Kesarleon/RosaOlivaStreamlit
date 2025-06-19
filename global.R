@@ -30,7 +30,7 @@ APP_CONFIG <- list(
   socio_search_keyword_default = "joyeria", # Can be different from map_search_keyword_default if needed
   sucursales_rosa_data = data.frame(
     id = c("A", "B", "C"),
-    nombre = c("Sucursal A", "Sucursal B", "Sucursal C"),
+    nombre = c("Sucursal Violetas", "Sucursal Poniente", "Sucursal Sur"),
     lat = c(17.078904, 17.07, 17.05),
     lng = c(-96.710641, -96.73, -96.71),
     atractivo = c(4.0, 4.0, 4.2), # Example attractiveness scores
