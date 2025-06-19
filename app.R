@@ -1,4 +1,23 @@
 # Rosa Oliva Geoespacial - app principal
+#
+# Main application file for the Shiny dashboard.
+# This file defines the UI and server logic, and sources global configurations,
+# data, and UI/server modules.
+#
+# Main R Packages Used:
+# - shiny: Web Application Framework for R
+# - shinydashboard: Create Dashboards with 'Shiny'
+# - leaflet: Interactive Web Maps with the JavaScript 'Leaflet' Library
+# - dplyr: A Grammar of Data Manipulation
+# - sf: Simple Features for R
+# - tidyr: Tidy Messy Data
+# - DT: A Wrapper of the JavaScript Library 'DataTables'
+# - tidyverse: Easily Install and Load the 'Tidyverse'
+# - jsonlite: A Robust, High Performance JSON Parser and Generator for R
+# - googleway: Retrieves Data from 'Google Maps' APIs
+# - shinyjs: Easily Improve the User Experience of Your Shiny Apps in Seconds
+# - geosphere: Spherical Trigonometry
+
 library(shiny)
 library(shinydashboard)
 library(leaflet)
@@ -8,14 +27,22 @@ library(tidyr)
 library(DT)
 
 # Cargar configuraciones y datos
-source('global.R')
+source("global.R") # Contains global variables, data loading, and utility functions
 
-# Cargar módulos
+# Cargar módulos (UI and server components for each tab)
 source("modules/mod_mapa.R")
-source("modules/mod_huff.R") 
+source("modules/mod_huff.R")
 source("modules/mod_socio.R")
 source("modules/mod_agente.R")
 
+#' Defines the user interface (UI) for the Shiny application.
+#'
+#' This function sets up the overall layout of the dashboard, including the
+#' header, sidebar, and body. It defines the navigation menu and the content
+#' areas for different modules.
+#'
+#' @return A `dashboardPage` Shiny UI object.
+#' @export
 ui <- dashboardPage(
   dashboardHeader(title = "Rosa Oliva Geoespacial"),
   dashboardSidebar(
@@ -28,15 +55,15 @@ ui <- dashboardPage(
   ),
   dashboardBody(
     # CSS personalizado si existe
-    if (file.exists("www/theme.css")) includeCSS("www/theme.css"),
-    
+    if (file.exists("www/theme.css")) {
+      includeCSS("www/theme.css")
+    },
     # Favicon si existe
     tags$head(
       if (file.exists("www/favicon/favicon.ico")) {
         tags$link(rel = "shortcut icon", href = "www/favicon/favicon.ico")
       }
     ),
-    
     tabItems(
       tabItem(tabName = "mapa", mod_mapa_ui("mapa_ui")),
       tabItem(tabName = "huff", mod_huff_ui("huff_ui")),
@@ -46,6 +73,17 @@ ui <- dashboardPage(
   )
 )
 
+#' Defines the server-side logic for the Shiny application.
+#'
+#' This function initializes and manages the server-side components of the
+#' application. It calls the server functions for each of the loaded modules,
+#' enabling reactive data processing and dynamic output generation.
+#'
+#' @param input A list-like object containing all the reactive input values from the UI.
+#' @param output A list-like object for storing all the reactive output values to be displayed in the UI.
+#' @param session A special object that provides information and control over the user's session.
+#' @return This function does not explicitly return a value but sets up reactive logic.
+#' @export
 server <- function(input, output, session) {
   # Llamar servidores de módulos
   mod_mapa_server("mapa_ui")
@@ -57,6 +95,8 @@ server <- function(input, output, session) {
 # Manejar errores de la aplicación
 options(shiny.error = function() {
   cat("Error en la aplicación Shiny\n")
+  # One could also redirect to an error page or show a custom message in the UI.
+  # For example: shinyjs::alert("An unexpected error occurred. Please contact support.")
 })
 
 shinyApp(ui, server)

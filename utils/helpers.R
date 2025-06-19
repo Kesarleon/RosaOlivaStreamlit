@@ -1,11 +1,9 @@
 # utils/helpers.R
 # Funciones auxiliares para inputs, centrado, validación, etc.
+# No functions currently defined in this file after removal of centrar_en.
+# This file can be kept for future helper functions or removed if not needed.
 
-centrar_en <- function(nombre, tipo = c("estado", "municipio", "localidad")) {
-  # Solo simulado
-  switch(nombre,
-         "Oaxaca" = c(lat = 17.06, lon = -96.72),
-         "Puerto Escondido" = c(lat = 15.86, lon = -97.08),
-         "Huejutla" = c(lat = 21.13, lon = -98.42),
-         c(lat = 17.06, lon = -96.72)) # default
-}
+# The 'centrar_en' function was removed as it was not used by any module.
+# Original function provided simulated coordinates for map centering.
+# If similar functionality is needed, it should be re-evaluated and potentially
+# integrated with APP_CONFIG or a geocoding service.
