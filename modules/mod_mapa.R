@@ -265,7 +265,7 @@ mod_mapa_server <- function(id) {
         border = "white",
         main = paste("Distribución de:", input$variable),
         xlab = gsub("_", " ", Hmisc::capitalize(input$variable)),
-        ylab = "Frecuencia de Hexágonos"
+        ylab = "Frecuencia"
       )
     })
   }) # End moduleServer
