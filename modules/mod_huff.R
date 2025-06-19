@@ -259,14 +259,14 @@ mod_huff_server <- function(id) {
               lng = ~lng, lat = ~lat,
               popup = ~paste0("<b>", nombre, "</b><br>Atractivo (interno): ", atractivo),
               layerId = ~paste0("suc_", id),
-              icon = leaflet::awesomeIcons(icon = "store", library = "fa", markerColor = "red")
+              icon = leaflet::awesomeIcons(icon = "store", library = "fa", markerColor = "darkgreen")
             ) %>%
             leaflet::addAwesomeMarkers(
               data = competencia(),
               lng = ~lng, lat = ~lat,
               popup = ~paste0("<b>", nombre, "</b><br>Atractivo (Google): ", round(atractivo, 2)),
               layerId = ~paste0("comp_", id),
-              icon = leaflet::awesomeIcons(icon = "store", library = "fa", markerColor = "blue")
+              icon = leaflet::awesomeIcons(icon = "store", library = "fa", markerColor = "black")
             ) %>%
             leaflet::addCircleMarkers(
               lng = ~agebs_lng, lat = ~agebs_lat,
