@@ -86,16 +86,64 @@ mod_mapa_server <- function(id) {
       }
     })
     
-    # Center map based on text inputs (simulated)
+    # Center map based on text inputs using get_centroid_for_area
     observeEvent(input$centrar, {
-      # This is a placeholder for actual geocoding functionality
-      # For now, it just slightly jitters the current center or a default if not set
-      current_center <- if (!is.null(centro())) centro() else c(lat = APP_CONFIG$default_lat, lng = APP_CONFIG$default_lng)
-      new_center <- c(
-        lat = current_center[1] + runif(1, -0.01, 0.01), # Slight random shift for demo
-        lng = current_center[2] + runif(1, -0.01, 0.01)
+      mun_name <- input$municipio
+      loc_name <- input$localidad
+
+      # Check if both inputs are empty or NULL
+      if ((is.null(mun_name) || !nzchar(trimws(mun_name))) &&
+          (is.null(loc_name) || !nzchar(trimws(loc_name)))) {
+        showNotification("Por favor, ingrese un nombre de municipio y/o localidad para centrar.", type = "warning", duration = 5)
+        return()
+      }
+
+      # Ensure agebs_hex is available and valid
+      if (!exists("agebs_hex") || !inherits(agebs_hex, "sf")) {
+          showNotification("Error crítico: Datos geográficos base (agebs_hex) no están disponibles o son inválidos.", type = "error", duration = 7)
+          return()
+      }
+      if (!all(c("nombre_municipio", "nombre_localidad") %in% names(agebs_hex))) {
+          showNotification("Error crítico: Columnas 'nombre_municipio' o 'nombre_localidad' ausentes en datos geográficos.", type = "error", duration = 7)
+          # This check is more for development; previous subtasks should ensure columns exist.
+          return()
+      }
+
+      new_center_coords <- get_centroid_for_area(
+        municipio_name = mun_name, # Pass even if empty, helper handles it
+        localidad_name = loc_name, # Pass even if empty, helper handles it
+        sf_data = agebs_hex
       )
-      centro(new_center)
+
+      if (!is.null(new_center_coords) &&
+          is.numeric(new_center_coords$lat) && is.numeric(new_center_coords$lng)) {
+
+        # Update the reactive centro value. This will also make the main map rendering update if it depends on it.
+        centro(c(lat = new_center_coords$lat, lng = new_center_coords$lng))
+
+        # Directly update the map view for immediate effect and specific zoom level.
+        leafletProxy("mapa") %>%
+          setView(lng = new_center_coords$lng, lat = new_center_coords$lat, zoom = 14)
+
+        # Construct a more informative message
+        area_message_parts <- c()
+        if (nzchar(trimws(mun_name))) area_message_parts <- c(area_message_parts, paste("Municipio:", mun_name))
+        if (nzchar(trimws(loc_name))) area_message_parts <- c(area_message_parts, paste("Localidad:", loc_name))
+        area_string <- paste(area_message_parts, collapse = ", ")
+
+        showNotification(paste("Mapa centrado en el área:", area_string), type = "message", duration = 5)
+      } else {
+        # Construct a detailed warning message
+        warning_message_parts <- c("No se pudo encontrar o calcular el centro para:")
+        if (nzchar(trimws(mun_name))) warning_message_parts <- c(warning_message_parts, paste("Municipio '", mun_name,"'", sep=""))
+        if (nzchar(trimws(loc_name))) warning_message_parts <- c(warning_message_parts, paste("Localidad '", loc_name,"'", sep=""))
+        warning_message <- paste(warning_message_parts, collapse = ", ")
+        showNotification(
+          paste0(warning_message, ". Verifique los nombres e inténtelo de nuevo."),
+          type = "warning",
+          duration = 7
+        )
+      }
     })
     
     # Reset map markers and view
@@ -109,6 +157,75 @@ mod_mapa_server <- function(id) {
         setView(lng = APP_CONFIG$default_lng, lat = APP_CONFIG$default_lat, zoom = 13) # Use APP_CONFIG
     })
     
+    # Observer for map clicks
+    observeEvent(input$mapa_click, {
+      req(input$mapa_click) # Ensure click data is available
+
+      clicked_lat <- input$mapa_click$lat
+      clicked_lng <- input$mapa_click$lng
+
+      centro(c(lat = clicked_lat, lng = clicked_lng)) # Update map center
+
+      showNotification(paste("Buscando negocios en:", round(clicked_lat, 5), round(clicked_lng, 5)), type = "message", duration = 3)
+
+      token_valido <- Sys.getenv("INEGI_API_KEY")
+
+      if (!nzchar(token_valido)) {
+        # Simulate data if API key is missing
+        n_negocios_sim <- sample(3:10, 1)
+        sim_data <- data.frame(
+          nombre = paste("Negocio Simulado (clic)", 1:n_negocios_sim),
+          latitud = clicked_lat + runif(n_negocios_sim, -0.005, 0.005),
+          longitud = clicked_lng + runif(n_negocios_sim, -0.005, 0.005),
+          stringsAsFactors = FALSE
+        )
+        negocios_data(sim_data)
+        showNotification(
+          paste("API Key de INEGI no encontrada. Mostrando", n_negocios_sim, "negocios simulados."),
+          type = "warning",
+          duration = 5
+        )
+      } else {
+        # Proceed with API call
+        tipos_click <- trimws(unlist(strsplit(input$palabra_clave, ",")))
+        radio_click <- input$radio # Assuming input$radio is available and correct
+
+        negocios_en_clic <- data.frame()
+        # Loop through each keyword and call API
+        for (tipo_kw_click in tipos_click) {
+          if (nzchar(tipo_kw_click)) { # Ensure keyword is not empty
+            res_click <- tryCatch({
+              inegi_denue(
+                latitud = clicked_lat,
+                longitud = clicked_lng,
+                token = token_valido,
+                meters = radio_click,
+                keyword = tipo_kw_click
+              )
+            }, error = function(e) {
+              showNotification(paste("Error al llamar a INEGI DENUE para '", tipo_kw_click, "': ", e$message), type = "error", duration = 7)
+              return(data.frame()) # Return empty dataframe on error for this keyword
+            })
+
+            if (nrow(res_click) > 0) {
+              negocios_en_clic <- rbind(negocios_en_clic, res_click)
+            }
+          }
+        }
+
+        if (nrow(negocios_en_clic) > 0) {
+          negocios_en_clic <- unique(negocios_en_clic) # Remove duplicates
+        }
+
+        negocios_data(negocios_en_clic) # Update reactive data
+
+        if (nrow(negocios_en_clic) == 0) {
+          showNotification("No se encontraron negocios en el punto seleccionado.", type = "warning", duration = 5)
+        } else {
+          showNotification(paste("Se encontraron", nrow(negocios_en_clic), "negocios cerca del punto seleccionado."), type = "message", duration = 5)
+        }
+      }
+    })
     
     # Search for businesses
     observeEvent(input$buscar, {
