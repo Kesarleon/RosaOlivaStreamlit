@@ -50,7 +50,7 @@ library(geosphere) # Para cálculo de distancias geográficas precisas
 #' # Calcular probabilidades de Huff
 #' resultados_huff <- huff_model(cliente_lat, cliente_lng, tiendas, alfa = 1, beta = 2)
 #' print(resultados_huff)
-huff_model <- function(ag_lat, ag_lng, puntos, alfa = 1, beta = 2) {
+huff_model <- function(ag_lat, ag_lng, puntos, alfa = 1, beta = 3) {
   # puntos: data.frame con lat, lng, id, atractivo
   # ag_lat, ag_lng: latitude and longitude of the current demand point (e.g., AGEB)
   # alfa: attraction parameter
