@@ -13,8 +13,8 @@ mod_mapa_ui <- function(id) {
         checkboxInput(ns("mostrar_hexbin"), "Mostrar hexágonos", value = TRUE),
         wellPanel(
           textInput(ns("estado"), "Estado:", "Oaxaca"), # Default state, consider making configurable if needed
-          textInput(ns("municipio"), "Municipio:", ""),
-          textInput(ns("localidad"), "Localidad:", ""),
+          selectizeInput(ns("municipio"), "Municipio:", choices = NULL, options = list(placeholder = "Escriba un municipio...", create = TRUE)), # choices = NULL for server-side update, create = TRUE allows new entries
+          selectizeInput(ns("localidad"), "Localidad:", choices = NULL, options = list(placeholder = "Escriba una localidad...", create = TRUE)), # choices = NULL for server-side update
           actionButton(ns("centrar"), "Centrar mapa"),
           hr(),
           textInput(ns("palabra_clave"), "Palabra clave (ej. joyería, boutique):",
@@ -67,12 +67,82 @@ mod_mapa_ui <- function(id) {
 mod_mapa_server <- function(id) {
   moduleServer(id, function(input, output, session) {
     ns <- session$ns
+
+    # Initial population of selectize inputs for Municipio and Localidad
+    # This runs once when the module is initialized.
+    if (exists("agebs_hex") && inherits(agebs_hex, "sf") &&
+        all(c("nombre_municipio", "nombre_localidad") %in% names(agebs_hex))) {
+
+        # Get unique, sorted municipio names, excluding NA or empty strings
+        mun_choices <- unique(agebs_hex$nombre_municipio)
+        mun_choices <- sort(mun_choices[!is.na(mun_choices) & nzchar(trimws(mun_choices))])
+        updateSelectizeInput(session, "municipio", choices = mun_choices, selected = "", server = TRUE)
+
+        # Get unique, sorted localidad names, excluding NA or empty strings
+        loc_choices <- unique(agebs_hex$nombre_localidad)
+        loc_choices <- sort(loc_choices[!is.na(loc_choices) & nzchar(trimws(loc_choices))])
+        updateSelectizeInput(session, "localidad", choices = loc_choices, selected = "", server = TRUE)
+    } else {
+        warning("mod_mapa_server: agebs_hex data is not available or missing required columns for selectize inputs at initialization.")
+        updateSelectizeInput(session, "municipio", choices = character(0), selected = "", server = TRUE)
+        updateSelectizeInput(session, "localidad", choices = character(0), selected = "", server = TRUE)
+    }
     
     # Reactive values
     user_location <- reactiveVal(NULL)
+    clicked_coordinates <- reactiveVal(NULL) # For storing map click coordinates
     # Initialize map center with default coordinates from APP_CONFIG
     centro <- reactiveVal(c(lat = APP_CONFIG$default_lat, lng = APP_CONFIG$default_lng))
     negocios_data <- reactiveVal(data.frame()) # Stores data for businesses
+
+    # Dynamic update of Localidad choices based on selected Municipio
+    observeEvent(input$municipio, {
+        selected_mun <- input$municipio
+
+        # Ensure agebs_hex is available for dynamic updates too
+        if (exists("agebs_hex") && inherits(agebs_hex, "sf") &&
+            all(c("nombre_municipio", "nombre_localidad") %in% names(agebs_hex))) {
+
+            current_loc_val <- input$localidad # Preserve current localidad if possible
+
+            if (!is.null(selected_mun) && nzchar(trimws(selected_mun))) {
+                # Filter localities based on the selected municipio
+                # Ensure case-insensitive comparison for municipio name
+                filtered_loc_choices <- unique(
+                    agebs_hex$nombre_localidad[tolower(trimws(as.character(agebs_hex$nombre_municipio))) == tolower(trimws(selected_mun))]
+                )
+                filtered_loc_choices <- sort(filtered_loc_choices[!is.na(filtered_loc_choices) & nzchar(trimws(filtered_loc_choices))])
+
+                # Decide selected value for localidad
+                selected_loc_val <- if (!is.null(current_loc_val) && current_loc_val %in% filtered_loc_choices) {
+                                        current_loc_val
+                                    } else {
+                                        "" # Or filtered_loc_choices[1] if you want to auto-select the first
+                                    }
+
+                if (length(filtered_loc_choices) == 0) {
+                    # If no specific localities, show all localities or an empty list.
+                    # For consistency, let's show all if the specific filter yields none.
+                    all_loc_choices <- unique(agebs_hex$nombre_localidad)
+                    all_loc_choices <- sort(all_loc_choices[!is.na(all_loc_choices) & nzchar(trimws(all_loc_choices))])
+                    updateSelectizeInput(session, "localidad", choices = all_loc_choices, selected = "", server = TRUE)
+                    # Optional: Notify user if specific localities for a municipio are expected but not found
+                    # showNotification("No localidades específicas para este municipio, mostrando todas.", type="info", duration=3)
+                } else {
+                   updateSelectizeInput(session, "localidad", choices = filtered_loc_choices, selected = selected_loc_val, server = TRUE)
+                }
+            } else {
+                # If municipio is cleared/empty, reset localidad to all choices
+                all_loc_choices <- unique(agebs_hex$nombre_localidad)
+                all_loc_choices <- sort(all_loc_choices[!is.na(all_loc_choices) & nzchar(trimws(all_loc_choices))])
+                updateSelectizeInput(session, "localidad", choices = all_loc_choices, selected = "", server = TRUE)
+            }
+        } else {
+            warning("mod_mapa_server: agebs_hex data not available for dynamic localidad update.")
+            # Potentially disable or clear localidad input if agebs_hex is missing
+            updateSelectizeInput(session, "localidad", choices = character(0), selected = "", server = TRUE)
+        }
+    }, ignoreNULL = FALSE, ignoreInit = TRUE) # ignoreNULL=FALSE to react to clearing; ignoreInit=TRUE for initial setup
     
     # Handle geolocation
     observeEvent(input$get_location, {
@@ -109,29 +179,42 @@ mod_mapa_server <- function(id) {
           return()
       }
 
-      new_center_coords <- get_centroid_for_area(
-        municipio_name = mun_name, # Pass even if empty, helper handles it
-        localidad_name = loc_name, # Pass even if empty, helper handles it
+      # Renamed to new_center_coords_list to match prompt and avoid potential conflicts
+      new_center_coords_list <- get_centroid_for_area(
+        municipio_name = mun_name,
+        localidad_name = loc_name,
         sf_data = agebs_hex
       )
 
-      if (!is.null(new_center_coords) &&
-          is.numeric(new_center_coords$lat) && is.numeric(new_center_coords$lng)) {
+      if (!is.null(new_center_coords_list) &&
+          is.numeric(new_center_coords_list$lat) && is.numeric(new_center_coords_list$lng)) {
 
-        # Update the reactive centro value. This will also make the main map rendering update if it depends on it.
-        centro(c(lat = new_center_coords$lat, lng = new_center_coords$lng))
+        current_lat <- new_center_coords_list$lat
+        current_lng <- new_center_coords_list$lng
 
-        # Directly update the map view for immediate effect and specific zoom level.
+        centro(c(lat = current_lat, lng = current_lng))
+
+        # Store these coordinates as the new 'active' point for search
+        clicked_coordinates(list(lat = current_lat, lng = current_lng))
+
+        # Add/Update the 'selected_point_marker' at the centroid location
         leafletProxy("mapa") %>%
-          setView(lng = new_center_coords$lng, lat = new_center_coords$lat, zoom = 14)
+          clearGroup("selected_point_marker") %>% # Clear previous selection marker
+          addAwesomeMarkers(
+            lng = current_lng,
+            lat = current_lat,
+            icon = awesomeIcons(icon = "crosshairs", library = "fa", markerColor = "blue", iconColor = "#FFF"), # Different icon/color for centroid
+            group = "selected_point_marker",
+            layerId = "centroid_location_marker"
+          ) %>%
+          setView(lng = current_lng, lat = current_lat, zoom = 14)
 
-        # Construct a more informative message
         area_message_parts <- c()
         if (nzchar(trimws(mun_name))) area_message_parts <- c(area_message_parts, paste("Municipio:", mun_name))
         if (nzchar(trimws(loc_name))) area_message_parts <- c(area_message_parts, paste("Localidad:", loc_name))
         area_string <- paste(area_message_parts, collapse = ", ")
 
-        showNotification(paste("Mapa centrado en el área:", area_string), type = "message", duration = 5)
+        showNotification(paste("Mapa centrado en:", area_string, ". Este punto está activo para la búsqueda."), type = "message", duration = 6)
       } else {
         # Construct a detailed warning message
         warning_message_parts <- c("No se pudo encontrar o calcular el centro para:")
@@ -150,138 +233,145 @@ mod_mapa_server <- function(id) {
     observeEvent(input$reset_mapa, {
       negocios_data(data.frame()) # Clear business data
       user_location(NULL) # Clear user location
+      clicked_coordinates(NULL) # Clear clicked coordinates
+
       # Reset to default center from APP_CONFIG
       centro(c(lat = APP_CONFIG$default_lat, lng = APP_CONFIG$default_lng))
+
       leafletProxy("mapa") %>%
-        clearGroup("markers") %>%
+        clearGroup("markers") %>% # Clears business markers
+        clearGroup("selected_point_marker") %>% # Clears the map click marker
         setView(lng = APP_CONFIG$default_lng, lat = APP_CONFIG$default_lat, zoom = 13) # Use APP_CONFIG
     })
     
-    # Observer for map clicks
+    # Observer for map clicks (New behavior: only select point, do not search)
     observeEvent(input$mapa_click, {
       req(input$mapa_click) # Ensure click data is available
 
-      clicked_lat <- input$mapa_click$lat
-      clicked_lng <- input$mapa_click$lng
+      # Store clicked coordinates
+      coords <- list(lat = input$mapa_click$lat, lng = input$mapa_click$lng)
+      clicked_coordinates(coords)
 
-      centro(c(lat = clicked_lat, lng = clicked_lng)) # Update map center
-
-      showNotification(paste("Buscando negocios en:", round(clicked_lat, 5), round(clicked_lng, 5)), type = "message", duration = 3)
-
-      token_valido <- Sys.getenv("INEGI_API_KEY")
-
-      if (!nzchar(token_valido)) {
-        # Simulate data if API key is missing
-        n_negocios_sim <- sample(3:10, 1)
-        sim_data <- data.frame(
-          nombre = paste("Negocio Simulado (clic)", 1:n_negocios_sim),
-          latitud = clicked_lat + runif(n_negocios_sim, -0.005, 0.005),
-          longitud = clicked_lng + runif(n_negocios_sim, -0.005, 0.005),
-          stringsAsFactors = FALSE
+      # Add a marker for the selected point
+      # Use a specific group for this marker, e.g., "selected_point_marker"
+      # Clear previous marker in this group first
+      leafletProxy("mapa") %>%
+        clearGroup("selected_point_marker") %>%
+        addAwesomeMarkers(
+          lng = coords$lng,
+          lat = coords$lat,
+          icon = awesomeIcons(icon = "map-marker", library = "fa", markerColor = "red", iconColor = "#FFF"),
+          group = "selected_point_marker",
+          layerId = "clicked_location_marker" # Add a layerId for potential future direct manipulation
         )
-        negocios_data(sim_data)
-        showNotification(
-          paste("API Key de INEGI no encontrada. Mostrando", n_negocios_sim, "negocios simulados."),
-          type = "warning",
-          duration = 5
-        )
-      } else {
-        # Proceed with API call
-        tipos_click <- trimws(unlist(strsplit(input$palabra_clave, ",")))
-        radio_click <- input$radio # Assuming input$radio is available and correct
 
-        negocios_en_clic <- data.frame()
-        # Loop through each keyword and call API
-        for (tipo_kw_click in tipos_click) {
-          if (nzchar(tipo_kw_click)) { # Ensure keyword is not empty
-            res_click <- tryCatch({
-              inegi_denue(
-                latitud = clicked_lat,
-                longitud = clicked_lng,
-                token = token_valido,
-                meters = radio_click,
-                keyword = tipo_kw_click
-              )
-            }, error = function(e) {
-              showNotification(paste("Error al llamar a INEGI DENUE para '", tipo_kw_click, "': ", e$message), type = "error", duration = 7)
-              return(data.frame()) # Return empty dataframe on error for this keyword
-            })
+      showNotification("Punto seleccionado en el mapa. Use 'Buscar negocios' para encontrar negocios aquí.", type = "info", duration = 5)
 
-            if (nrow(res_click) > 0) {
-              negocios_en_clic <- rbind(negocios_en_clic, res_click)
-            }
-          }
-        }
-
-        if (nrow(negocios_en_clic) > 0) {
-          negocios_en_clic <- unique(negocios_en_clic) # Remove duplicates
-        }
-
-        negocios_data(negocios_en_clic) # Update reactive data
-
-        if (nrow(negocios_en_clic) == 0) {
-          showNotification("No se encontraron negocios en el punto seleccionado.", type = "warning", duration = 5)
-        } else {
-          showNotification(paste("Se encontraron", nrow(negocios_en_clic), "negocios cerca del punto seleccionado."), type = "message", duration = 5)
-        }
-      }
+      # Update map center to the clicked point for visual feedback
+      centro(c(lat = coords$lat, lng = coords$lng))
     })
     
     # Search for businesses
     observeEvent(input$buscar, {
-      req(centro()) # Ensure map center is available
+      search_lat <- NULL
+      search_lng <- NULL
+      search_source_message <- ""
+
+      # Determine coordinates for the search
+      if (!is.null(clicked_coordinates())) {
+        search_lat <- clicked_coordinates()$lat
+        search_lng <- clicked_coordinates()$lng
+        search_source_message <- "el punto previamente seleccionado"
+        # Optional: Clear clicked_coordinates() after use if it's a one-time use.
+        # For now, kept persistent until a new click or centering.
+        # clicked_coordinates(NULL)
+        # leafletProxy("mapa") %>% clearGroup("selected_point_marker")
+      } else if (!is.null(centro())) { # Fallback to current map center
+        # Ensure centro() gives list(lat, lng) or c(lat, lng)
+        # Assuming centro() is c(lat = val, lng = val) or list(lat = val, lng = val)
+        if (is.list(centro()) && !is.null(centro()$lat) && !is.null(centro()$lng)) {
+            search_lat <- centro()$lat
+            search_lng <- centro()$lng
+        } else if (is.numeric(centro()) && length(centro()) == 2 && !is.null(names(centro())) && all(names(centro()) %in% c("lat", "lng"))) {
+            search_lat <- centro()["lat"]
+            search_lng <- centro()["lng"]
+        } else if (is.numeric(centro()) && length(centro()) == 2) { # Fallback if unnamed c(lat,lng)
+            search_lat <- centro()[1]
+            search_lng <- centro()[2]
+            warning("centro() was an unnamed vector, assuming order lat, lng. Named list or vector is preferred.")
+        }
+        search_source_message <- "el centro actual del mapa"
+      } else {
+        showNotification("No hay un punto de referencia para la búsqueda (ni clic, ni centro de mapa).", type = "error", duration = 5)
+        return()
+      }
+
+      if (is.null(search_lat) || is.null(search_lng) || !is.numeric(search_lat) || !is.numeric(search_lng)) {
+        showNotification("Coordenadas para la búsqueda no válidas o no numéricas.", type = "error", duration = 5)
+        return()
+      }
       
+      showNotification(paste("Iniciando búsqueda de negocios en", search_source_message,
+                             ": (", round(search_lat, 5), ", ", round(search_lng, 5), ")"),
+                       type = "message", duration = 3)
+
       tryCatch({
-        lat <- centro()[1]
-        lon <- centro()[2]
+        token_valido <- Sys.getenv("INEGI_API_KEY")
         
-        # Check for INEGI API key
-        if (!nzchar(Sys.getenv("INEGI_API_KEY"))) {
-          # Use simulated data if API key is missing
-          n_negocios <- sample(5:15, 1)
-          negocios_sim <- data.frame(
-            nombre = paste("Negocio Simulado", 1:n_negocios),
-            latitud = lat + runif(n_negocios, -0.005, 0.005),
-            longitud = lon + runif(n_negocios, -0.005, 0.005),
+        if (!nzchar(token_valido)) {
+          n_negocios_sim <- sample(5:15, 1)
+          sim_data <- data.frame(
+            nombre = paste("Negocio Simulado (búsqueda)", 1:n_negocios_sim),
+            latitud = search_lat + runif(n_negocios_sim, -0.005, 0.005),
+            longitud = search_lng + runif(n_negocios_sim, -0.005, 0.005),
             stringsAsFactors = FALSE
           )
-          negocios_data(negocios_sim)
+          negocios_data(sim_data)
           showNotification(
-            paste("Se encontraron", n_negocios, "negocios (simulados por falta de API key)."),
-            type = "warning"
+            paste("API Key de INEGI no encontrada. Mostrando", n_negocios_sim, "negocios simulados cerca de", search_source_message,"."),
+            type = "warning", duration = 5
           )
         } else {
-          # Use real API data
-          tipos <- trimws(unlist(strsplit(input$palabra_clave, ",")))
-          negocios_todos <- data.frame()
+          tipos_busqueda <- trimws(unlist(strsplit(input$palabra_clave, ",")))
+          radio_busqueda <- input$radio
           
-          for (tipo_kw in tipos) {
-            negocios_tipo <- inegi_denue(
-              latitud = lat,
-              longitud = lon,
-              meters = input$radio,
-              keyword = tipo_kw
-            )
-            if (nrow(negocios_tipo) > 0) {
-              negocios_todos <- rbind(negocios_todos, negocios_tipo)
+          negocios_encontrados <- data.frame()
+          for (tipo_kw_busqueda in tipos_busqueda) {
+            if (nzchar(tipo_kw_busqueda)) {
+              res_busqueda <- tryCatch({
+                inegi_denue(
+                  latitud = search_lat,
+                  longitud = search_lng,
+                  token = token_valido,
+                  meters = radio_busqueda,
+                  keyword = tipo_kw_busqueda
+                )
+              }, error = function(e) {
+                showNotification(paste("Error al llamar a INEGI DENUE para '", tipo_kw_busqueda, "': ", e$message), type = "error", duration = 7)
+                return(data.frame())
+              })
+
+              if (nrow(res_busqueda) > 0) {
+                negocios_encontrados <- rbind(negocios_encontrados, res_busqueda)
+              }
             }
           }
           
-          negocios_todos <- unique(negocios_todos) # Remove duplicates
-          negocios_data(negocios_todos)
+          if (nrow(negocios_encontrados) > 0) {
+            negocios_encontrados <- unique(negocios_encontrados)
+          }
+
+          negocios_data(negocios_encontrados)
           
-          if (nrow(negocios_todos) == 0) {
-            showNotification("No se encontraron negocios cercanos.", type = "warning")
+          if (nrow(negocios_encontrados) == 0) {
+            showNotification(paste("No se encontraron negocios para la palabra clave '", input$palabra_clave, "' cerca de", search_source_message, "."), type = "warning", duration = 5)
           } else {
-            showNotification(
-              paste("Se encontraron", nrow(negocios_todos), "negocios."),
-              type = "message"
-            )
+            showNotification(paste("Se encontraron", nrow(negocios_encontrados), "negocios para '", input$palabra_clave, "' cerca de", search_source_message, "."), type = "message", duration = 5)
           }
         }
       }, error = function(e) {
-        showNotification(paste("Error al buscar negocios:", e$message), type = "error")
-        message("Error en observeEvent input$buscar: ", e$message) # Log to console
+        showNotification(paste("Error general durante la búsqueda de negocios:", e$message), type = "error", duration = 7)
+        message("Error en observeEvent input$buscar: ", e$message)
       })
     })
     
