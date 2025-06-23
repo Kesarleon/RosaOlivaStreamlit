@@ -72,6 +72,16 @@ if (file.exists(APP_CONFIG$oaxaca_grid_filepath)) {
   # Load real data if available
   agebs_hex <- st_read(APP_CONFIG$oaxaca_grid_filepath, quiet = TRUE)
   
+  # Check if NOM_MUN and NOM_LOC exist, if not, create placeholder columns
+  if (!"NOM_MUN" %in% names(agebs_hex)) {
+    warning("Column 'NOM_MUN' not found in shapefile. Adding placeholder 'Desconocido'.")
+    agebs_hex$NOM_MUN <- "Desconocido"
+  }
+  if (!"NOM_LOC" %in% names(agebs_hex)) {
+    warning("Column 'NOM_LOC' not found in shapefile. Adding placeholder 'Desconocida'.")
+    agebs_hex$NOM_LOC <- "Desconocida"
+  }
+
   # Standardize column names and apply transformations
   agebs_hex <- agebs_hex %>%
     mutate(
@@ -80,15 +90,32 @@ if (file.exists(APP_CONFIG$oaxaca_grid_filepath)) {
       joven_digital = log1p(jvn_dgt),
       mama_emprendedora = log1p(mm_mprn),
       mayorista_experimentado = log1p(myrst_x),
-      clientes_totales = log1p(cts_ttl)
+      clientes_totales = log1p(cts_ttl),
+      nombre_municipio = as.character(NOM_MUN), # Add municipio name
+      nombre_localidad = as.character(NOM_LOC)  # Add localidad name
     ) %>%
     select(
       id_hex, poblacion_total, joven_digital, mama_emprendedora,
-      mayorista_experimentado, clientes_totales, geometry
+      mayorista_experimentado, clientes_totales,
+      nombre_municipio, nombre_localidad, # Keep the new columns
+      geometry
     )
   
   message("Successfully loaded real hexagonal grid data from: ", APP_CONFIG$oaxaca_grid_filepath)
   
+  # Add a message to confirm if columns were added or placeholders were used
+  if ("nombre_municipio" %in% names(agebs_hex) && any(agebs_hex$nombre_municipio == "Desconocido" & !"NOM_MUN" %in% names(st_read(APP_CONFIG$oaxaca_grid_filepath, quiet = TRUE)))) {
+      message("Placeholder values used for 'nombre_municipio' as 'NOM_MUN' was not found in the original shapefile.")
+  } else if ("nombre_municipio" %in% names(agebs_hex)) {
+      message("Successfully added 'nombre_municipio' from 'NOM_MUN' (or it already existed and was processed).")
+  }
+
+  if ("nombre_localidad" %in% names(agebs_hex) && any(agebs_hex$nombre_localidad == "Desconocida" & !"NOM_LOC" %in% names(st_read(APP_CONFIG$oaxaca_grid_filepath, quiet = TRUE)))) {
+      message("Placeholder values used for 'nombre_localidad' as 'NOM_LOC' was not found in the original shapefile.")
+  } else if ("nombre_localidad" %in% names(agebs_hex)) {
+      message("Successfully added 'nombre_localidad' from 'NOM_LOC' (or it already existed and was processed).")
+  }
+
 } else {
   # Generate simulated data if real data file is not found
   warning(
