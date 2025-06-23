@@ -6,12 +6,16 @@ mod_mapa_ui <- function(id) {
     fluidRow(
       column(
         width = 8,
-        leafletOutput(ns("mapa"), height = "700px"), # Ensure height is reasonable
-        br(),
+        # Increased map height to be responsive and fill more of the screen
+        # Adjusted to calc(100vh - 70px) to account for dashboard header and some margin
+        leafletOutput(ns("mapa"), height = "calc(100vh - 70px)"),
+        # br(), # Consider removing <br> if map takes full height of this column
         actionButton(ns("get_location"), "Obtener mi ubicación"),
         actionButton(ns("reset_mapa"), "Borrar marcadores y centrar mapa"),
         checkboxInput(ns("mostrar_hexbin"), "Mostrar hexágonos", value = TRUE),
-        wellPanel(
+        # Apply the 'controls' class to this wellPanel
+        wellPanel(class = "controls",
+          h4("Controles del Mapa"), # Added header for styling
           textInput(ns("estado"), "Estado:", "Oaxaca"), # Default state, consider making configurable if needed
           selectizeInput(ns("municipio"), "Municipio:", choices = NULL, options = list(placeholder = "Escriba un municipio...", create = TRUE)), # choices = NULL for server-side update, create = TRUE allows new entries
           selectizeInput(ns("localidad"), "Localidad:", choices = NULL, options = list(placeholder = "Escriba una localidad...", create = TRUE)), # choices = NULL for server-side update
