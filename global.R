@@ -8,21 +8,7 @@
 #' If specific datasets are not found, it falls back to generating simulated data
 #' to allow the application to run for demonstration or development purposes.
 
-<<<<<<< HEAD
-options(repos = c(
-  RSPM = "https://packagemanager.posit.co/cran/latest"
-))
 
-
-library(tidyverse)
-library(leaflet)
-library(sf)
-library(jsonlite)
-library(googleway)
-library(shinyjs)
-library(DT)
-library(geosphere)
-=======
 # --- Core Libraries ---
 library(tidyverse) # Collection of R packages for data science (dplyr, ggplot2, etc.)
 library(leaflet)   # Interactive web maps
@@ -32,7 +18,7 @@ library(googleway) # Google Maps API client
 library(shinyjs)   # Extend Shiny with JavaScript actions
 library(DT)        # Interactive DataTables
 library(geosphere) # Spherical trigonometry for geographic distances
->>>>>>> 83ad98885de34c23c5212131a5ef6133d0aa418c
+library(Hmisc)
 
 # --- Application Configuration ---
 APP_CONFIG <- list(
