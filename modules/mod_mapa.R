@@ -269,7 +269,7 @@ mod_mapa_server <- function(id) {
           layerId = "clicked_location_marker" # Add a layerId for potential future direct manipulation
         )
 
-      showNotification("Punto seleccionado en el mapa. Use 'Buscar negocios' para encontrar negocios aquí.", type = "info", duration = 5)
+      showNotification("Punto seleccionado en el mapa. Use 'Buscar negocios' para encontrar negocios aquí.", type = "message", duration = 5)
 
       # Update map center to the clicked point for visual feedback
       centro(c(lat = coords$lat, lng = coords$lng))
@@ -406,10 +406,10 @@ mod_mapa_server <- function(id) {
           fillOpacity = 0.6,
           color = "white",
           weight = 1,
-          label = ~ paste0(
-            "<b>ID Hex: ", id_hex, "</b><br>",
-            "Población Total: ", poblacion_total, "<br>",
-            input$variable, ": ", round(variable_data, 2)
+          popup = ~ paste0(
+            "<b>ID Hex: ", id_hex, 
+            "</b><br>", "Población Total: ", poblacion_total, "<br>",
+            input$variable, ": ", round(variable_data)
           ),
           group = "hex"
         )

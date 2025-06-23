@@ -62,6 +62,7 @@ token_inegi <- Sys.getenv("INEGI_API_KEY")
 # --- Utility Functions ---
 # Load custom utility functions. Ensure paths are correct.
 source("utils/inegi_denue.R") # Function to interact with INEGI DENUE API
+source("utils/helpers.R")     # Function to switch center of the map to Mun & Loc selected
 
 # --- Data Loading: Hexagonal Grid Data (AGEBs) ---
 # This section loads the primary hexagonal grid data (`agebs_hex`).
