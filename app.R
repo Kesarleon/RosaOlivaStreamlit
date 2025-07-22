@@ -97,8 +97,8 @@ ui <- dashboardPage(
 #' @export
 server <- function(input, output, session) {
   # Llamar servidores de módulos
-  mod_mapa_server("mapa_ui")
-  mod_huff_server("huff_ui")
+  map_data <- mod_mapa_server("mapa_ui")
+  mod_huff_server("huff_ui", map_data)
   mod_socio_server("socio_ui")
   mod_agente_server("agente_ui")
 }
