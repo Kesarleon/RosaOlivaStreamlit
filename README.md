@@ -16,7 +16,7 @@ Visualizar y analizar:
 
 | Módulo              | Descripción                                                                 |
 |---------------------|-----------------------------------------------------------------------------|
-| Mapa principal     | Hexágonos por población objetivo, ubicación del usuario y negocios cercanos |
+| Mapa principal     | Hexágonos por población objetivo, ubicación del usuario y negocios cercanos. Permite la selección interactiva de nuevas ubicaciones para análisis. |
 | Modelo Huff       | Estima captación de cada sucursal vs competencia                           |
 | Variables socio   | Histograma de variables socioeconómicas por zona                            |
 | Agente inteligente| AGEBS similares y evaluación de ubicaciones nuevas                          |
@@ -32,6 +32,16 @@ RosaOlivaApp/
 ├── utils/ # Funciones auxiliares: inegi_denue, helpers, scripts de preparación de datos
 ├── data/ # Datos simulados y pre-procesados (o reales si se cargan)
 ├── README.md  
+
+## Uso Interactivo
+
+Una de las características clave de la aplicación es la capacidad de interactuar directamente con el mapa para realizar análisis dinámicos:
+
+1.  **Selección de Nueva Ubicación**: Haz clic en cualquier punto del mapa en el **Módulo Mapa Principal**.
+2.  **Actualización Automática**:
+    *   El punto seleccionado se convierte en la nueva **sucursal** para el análisis del **Modelo Huff**.
+    *   El sistema buscará automáticamente los **5 negocios competidores más cercanos** a esa nueva ubicación utilizando la función `inegi_denue`.
+    *   El mapa y los análisis del Modelo Huff se actualizarán para reflejar esta nueva selección, permitiendo una evaluación rápida de múltiples escenarios de expansión.
 
 ## Data Preparation
 
