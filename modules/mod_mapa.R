@@ -16,37 +16,39 @@ mod_mapa_ui <- function(id) {
         # Apply the 'controls' class to this wellPanel
         wellPanel(class = "controls",
           h4("Controles del Mapa"), # Added header for styling
-          textInput(ns("estado"), "Estado:", "Oaxaca"), # Default state, consider making configurable if needed
-          selectizeInput(ns("municipio"), "Municipio:", choices = NULL, options = list(placeholder = "Escriba un municipio...", create = TRUE)), # choices = NULL for server-side update, create = TRUE allows new entries
-          selectizeInput(ns("localidad"), "Localidad:", choices = NULL, options = list(placeholder = "Escriba una localidad...", create = TRUE)), # choices = NULL for server-side update
-          actionButton(ns("centrar"), "Centrar mapa"),
-          hr(),
-          textInput(ns("palabra_clave"), "Palabra clave (ej. joyería, boutique):",
-                    value = APP_CONFIG$map_search_keyword_default), # From APP_CONFIG
-          numericInput(ns("radio"), "Radio de búsqueda (m):",
-                       value = APP_CONFIG$map_search_radius_default, # From APP_CONFIG
-                       min = 100, step = 100),
-          actionButton(ns("buscar"), "Buscar negocios"),
-          # Custom JS for geolocation
-          tags$script(HTML(paste0(
-            "Shiny.addCustomMessageHandler('get_location_", id, "', function(message) {
-              if (navigator.geolocation) {
-                navigator.geolocation.getCurrentPosition(
-                  function(position) {
-                    Shiny.setInputValue('", ns("location"), "', {
-                      lat: position.coords.latitude,
-                      lon: position.coords.longitude
-                    });
-                  },
-                  function() {
-                    alert('No se pudo obtener la ubicación. Por favor, verifica los permisos.');
+          div(class = "wellPanel-content",
+              textInput(ns("estado"), "Estado:", "Oaxaca"), # Default state, consider making configurable if needed
+              selectizeInput(ns("municipio"), "Municipio:", choices = NULL, options = list(placeholder = "Escriba un municipio...", create = TRUE)), # choices = NULL for server-side update, create = TRUE allows new entries
+              selectizeInput(ns("localidad"), "Localidad:", choices = NULL, options = list(placeholder = "Escriba una localidad...", create = TRUE)), # choices = NULL for server-side update
+              actionButton(ns("centrar"), "Centrar mapa"),
+              hr(),
+              textInput(ns("palabra_clave"), "Palabra clave (ej. joyería, boutique):",
+                        value = APP_CONFIG$map_search_keyword_default), # From APP_CONFIG
+              numericInput(ns("radio"), "Radio de búsqueda (m):",
+                           value = APP_CONFIG$map_search_radius_default, # From APP_CONFIG
+                           min = 100, step = 100),
+              actionButton(ns("buscar"), "Buscar negocios"),
+              # Custom JS for geolocation
+              tags$script(HTML(paste0(
+                "Shiny.addCustomMessageHandler('get_location_", id, "', function(message) {
+                  if (navigator.geolocation) {
+                    navigator.geolocation.getCurrentPosition(
+                      function(position) {
+                        Shiny.setInputValue('", ns("location"), "', {
+                          lat: position.coords.latitude,
+                          lon: position.coords.longitude
+                        });
+                      },
+                      function() {
+                        alert('No se pudo obtener la ubicación. Por favor, verifica los permisos.');
+                      }
+                    );
+                  } else {
+                    alert('La geolocalización no es soportada por este navegador.');
                   }
-                );
-              } else {
-                alert('La geolocalización no es soportada por este navegador.');
-              }
-            });"
-          ))) # End tags$script
+                });"
+              ))) # End tags$script
+          ) # End div
         ) # End wellPanel
       ), # End column
       column(
