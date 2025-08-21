@@ -66,8 +66,8 @@ ui <- dashboardPage(
   ),
   dashboardBody(
     # CSS personalizado si existe
-    if (file.exists("www/theme.css")) {
-      includeCSS("www/theme.css")
+    if (file.exists("www/modern_theme.css")) {
+      includeCSS("www/modern_theme.css")
     },
     # Favicon si existe
     tags$head(
