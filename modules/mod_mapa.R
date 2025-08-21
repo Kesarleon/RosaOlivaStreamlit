@@ -98,6 +98,8 @@ mod_mapa_server <- function(id) {
     # Initialize map center with default coordinates from APP_CONFIG
     centro <- reactiveVal(c(lat = APP_CONFIG$default_lat, lng = APP_CONFIG$default_lng))
     negocios_data <- reactiveVal(data.frame()) # Stores data for businesses
+    map_data <- reactiveValues(clicked_sucursal = NULL, competencia = NULL)
+
 
     # Dynamic update of Localidad choices based on selected Municipio
     observeEvent(input$municipio, {
@@ -273,6 +275,26 @@ mod_mapa_server <- function(id) {
 
       # Update map center to the clicked point for visual feedback
       centro(c(lat = coords$lat, lng = coords$lng))
+
+      # Find 5 nearest businesses
+      token_valido <- Sys.getenv("INEGI_API_KEY")
+      if (nzchar(token_valido)) {
+        negocios_encontrados <- inegi_denue(
+          latitud = coords$lat,
+          longitud = coords$lng,
+          token = token_valido,
+          meters = 500,
+          keyword = "todos"
+        )
+        if (nrow(negocios_encontrados) > 0) {
+          negocios_encontrados <- negocios_encontrados %>%
+            mutate(distancia = sqrt((latitud - coords$lat)^2 + (longitud - coords$lng)^2)) %>%
+            arrange(distancia) %>%
+            head(5)
+          map_data$competencia <- negocios_encontrados
+        }
+      }
+      map_data$clicked_sucursal <- coords
     })
     
     # Search for businesses
@@ -479,5 +501,7 @@ mod_mapa_server <- function(id) {
         ylab = "Frecuencia"
       )
     })
+
+    return(reactive({map_data}))
   }) # End moduleServer
 }

@@ -9,11 +9,7 @@ mod_huff_ui <- function(id) {
     fluidRow(
       column(
         width = 4,
-        selectInput(
-          ns("sucursal"),
-          "Sucursal Rosa Oliva:",
-          choices = APP_CONFIG$sucursales_rosa_data$nombre # From APP_CONFIG
-        ),
+        uiOutput(ns("sucursal_ui")),
         actionButton(ns("calcular"), "Calcular captación", class = "btn-primary"),
         br(), br(),
         h4("Parámetros del modelo:"),
@@ -36,7 +32,7 @@ mod_huff_ui <- function(id) {
   )
 }
 
-mod_huff_server <- function(id) {
+mod_huff_server <- function(id, map_data) {
   moduleServer(id, function(input, output, session) {
     ns <- session$ns
     
@@ -50,11 +46,27 @@ mod_huff_server <- function(id) {
     
     # --- Reactive Data Definitions ---
     sucursales_rosa <- reactive({
-      APP_CONFIG$sucursales_rosa_data # From APP_CONFIG
+      map_data_values <- map_data()
+      if (!is.null(map_data_values$clicked_sucursal)) {
+        data.frame(
+          id = "clicked",
+          nombre = "Sucursal Oportunidad",
+          atractivo = 100,
+          lat = map_data_values$clicked_sucursal$lat,
+          lng = map_data_values$clicked_sucursal$lng
+        )
+      } else {
+        APP_CONFIG$sucursales_rosa_data
+      }
     })
     
     competencia_base <- reactive({
-      APP_CONFIG$competencia_base_data # From APP_CONFIG
+      map_data_values <- map_data()
+      if (!is.null(map_data_values$competencia)) {
+        map_data_values$competencia
+      } else {
+        APP_CONFIG$competencia_base_data
+      }
     })
     
     competencia <- reactive({
@@ -207,6 +219,19 @@ mod_huff_server <- function(id) {
     })
     
     # --- Outputs ---
+    output$sucursal_ui <- renderUI({
+      map_data_values <- map_data()
+      if (!is.null(map_data_values$clicked_sucursal)) {
+        textInput(ns("sucursal"), "Sucursal Oportunidad:", value = "Ubicación seleccionada en el mapa")
+      } else {
+        selectInput(
+          ns("sucursal"),
+          "Sucursal Rosa Oliva:",
+          choices = APP_CONFIG$sucursales_rosa_data$nombre
+        )
+      }
+    })
+
     output$tabla_resultados <- DT::renderDataTable({
       res <- resultados()
       req(res)
