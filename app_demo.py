@@ -6,12 +6,18 @@ Simplified version with mock data for demonstration purposes.
 import streamlit as st
 import pandas as pd
 import numpy as np
-import folium
-from streamlit_folium import st_folium
 import plotly.express as px
 import plotly.graph_objects as go
 from datetime import datetime
-import json
+
+# Try to import folium, fallback if not available
+try:
+    import folium
+    from streamlit_folium import st_folium
+    FOLIUM_AVAILABLE = True
+except ImportError:
+    FOLIUM_AVAILABLE = False
+    st.warning("Folium not available - map functionality will be limited")
 
 # Demo configuration
 DEMO_CONFIG = {
@@ -63,6 +69,8 @@ def load_demo_data():
 
 def create_base_map(center_lat=17.0594, center_lng=-96.7216, zoom=12):
     """Create base folium map"""
+    if not FOLIUM_AVAILABLE:
+        return None
     m = folium.Map(
         location=[center_lat, center_lng],
         zoom_start=zoom,
@@ -77,29 +85,43 @@ def render_mapa_demo():
     
     sucursales, competencia, demograficos = load_demo_data()
     
-    # Create map
-    m = create_base_map()
-    
-    # Add Rosa Oliva stores
-    for _, store in sucursales.iterrows():
-        folium.Marker(
-            [store['lat'], store['lng']],
-            popup=f"<b>{store['nombre']}</b><br>Ventas: ${store['ventas_mensuales']:,}",
-            tooltip=store['nombre'],
-            icon=folium.Icon(color='red', icon='star')
-        ).add_to(m)
-    
-    # Add competition
-    for _, comp in competencia.iterrows():
-        folium.Marker(
-            [comp['lat'], comp['lng']],
-            popup=f"<b>{comp['nombre']}</b><br>Rating: {comp['rating']}/5",
-            tooltip=comp['nombre'],
-            icon=folium.Icon(color='blue', icon='info-sign')
-        ).add_to(m)
-    
-    # Display map
-    map_data = st_folium(m, width=700, height=500)
+    if FOLIUM_AVAILABLE:
+        # Create map
+        m = create_base_map()
+        
+        # Add Rosa Oliva stores
+        for _, store in sucursales.iterrows():
+            folium.Marker(
+                [store['lat'], store['lng']],
+                popup=f"<b>{store['nombre']}</b><br>Ventas: ${store['ventas_mensuales']:,}",
+                tooltip=store['nombre'],
+                icon=folium.Icon(color='red', icon='star')
+            ).add_to(m)
+        
+        # Add competition
+        for _, comp in competencia.iterrows():
+            folium.Marker(
+                [comp['lat'], comp['lng']],
+                popup=f"<b>{comp['nombre']}</b><br>Rating: {comp['rating']}/5",
+                tooltip=comp['nombre'],
+                icon=folium.Icon(color='blue', icon='info-sign')
+            ).add_to(m)
+        
+        # Display map
+        map_data = st_folium(m, width=700, height=500)
+    else:
+        # Fallback: show scatter plot instead of map
+        fig_map = px.scatter(
+            pd.concat([
+                sucursales.assign(tipo='Rosa Oliva'),
+                competencia.assign(tipo='Competencia')
+            ]),
+            x='lng', y='lat', color='tipo',
+            hover_name='nombre',
+            title='Ubicaciones de Tiendas (Vista Alternativa)',
+            width=700, height=500
+        )
+        st.plotly_chart(fig_map, use_container_width=True)
     
     # Show store information
     col1, col2 = st.columns(2)
