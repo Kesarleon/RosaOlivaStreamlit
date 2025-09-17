@@ -1,15 +1,15 @@
-# Rosa Oliva Geoespacial
+# Rosa Oliva Geoespacial - Streamlit Version
 
-App desarrollada en **R Shiny** para apoyar la toma de decisiones estratégicas de expansión de **Rosa Oliva**, una joyería enfocada en mercados de alto valor en México.
+App desarrollada en **Python Streamlit** para apoyar la toma de decisiones estratégicas de expansión de **Rosa Oliva**, una joyería enfocada en mercados de alto valor en México.
 
 ## Objetivo
 
 Visualizar y analizar:
 
-- Población objetivo por zonas (AGEBs)
+- Población objetivo por zonas (AGEBs) usando hexágonos
 - Competencia cercana mediante datos del INEGI (DENUE)
 - Captación estimada con modelo de Huff
-- AGEBS similares a las de nuestros clientes usando ML
+- AGEBs similares a las de nuestros clientes usando ML
 - Nuevas ubicaciones con estimaciones de impacto
 
 ## 🗺️ Módulos principales
@@ -18,68 +18,185 @@ Visualizar y analizar:
 |---------------------|-----------------------------------------------------------------------------|
 | Mapa principal     | Hexágonos por población objetivo, ubicación del usuario y negocios cercanos. Permite la selección interactiva de nuevas ubicaciones para análisis. |
 | Modelo Huff       | Estima captación de cada sucursal vs competencia                           |
-| Variables socio   | Histograma de variables socioeconómicas por zona                            |
-| Agente inteligente| AGEBS similares y evaluación de ubicaciones nuevas                          |
+| Variables socio   | Análisis completo de variables socioeconómicas por zona                     |
+| Agente inteligente| AGEBs similares y evaluación de ubicaciones nuevas usando ML               |
 
 ## Estructura del proyecto
 
-RosaOlivaApp/  
-├── app.R  
-├── global.R  
-├── www/ # Archivos visuales: favicon, CSS, íconos  
-├── modules/ # Código modular por hoja  
-├── models/ # Modelos Huff y ML (Nota: actualmente no hay una carpeta 'models', modelos están en 'utils' o simulados)
-├── utils/ # Funciones auxiliares: inegi_denue, helpers, scripts de preparación de datos
-├── data/ # Datos simulados y pre-procesados (o reales si se cargan)
-├── README.md  
+```
+RosaOlivaStreamlit/
+├── app.py                 # Aplicación principal Streamlit
+├── config.py              # Configuración global y carga de datos
+├── requirements.txt       # Dependencias Python
+├── README.md             # Este archivo
+├── modules/              # Código modular por página
+│   ├── __init__.py
+│   ├── mod_mapa.py       # Módulo de mapa interactivo
+│   ├── mod_huff.py       # Módulo de análisis Huff
+│   ├── mod_socio.py      # Módulo socioeconómico
+│   └── mod_agente.py     # Módulo de agente inteligente
+├── utils/                # Funciones auxiliares
+│   ├── __init__.py
+│   ├── huff_model.py     # Implementación del modelo Huff
+│   ├── inegi_denue.py    # Interacción con API INEGI
+│   ├── google_places.py  # Interacción con Google Places API
+│   └── helpers.py        # Funciones de ayuda geográficas
+├── www/                  # Archivos estáticos
+│   ├── modern_theme.css  # Estilos CSS personalizados
+│   └── logo_ro.png       # Logo (si está disponible)
+└── data/                 # Datos (opcional)
+    └── Oaxaca_grid/      # Datos de cuadrícula hexagonal
+```
+
+## Instalación y Configuración
+
+### 1. Clonar el repositorio
+```bash
+git clone <repository-url>
+cd RosaOlivaStreamlit
+```
+
+### 2. Crear entorno virtual
+```bash
+python -m venv venv
+source venv/bin/activate  # En Windows: venv\Scripts\activate
+```
+
+### 3. Instalar dependencias
+```bash
+pip install -r requirements.txt
+```
+
+### 4. Configurar variables de entorno
+Crear un archivo `.env` en la raíz del proyecto:
+
+```env
+GOOGLE_PLACES_API_KEY=tu_clave_google_places_aqui
+INEGI_API_KEY=tu_clave_inegi_aqui
+```
+
+### 5. Ejecutar la aplicación
+```bash
+streamlit run app.py
+```
 
 ## Uso Interactivo
 
-Una de las características clave de la aplicación es la capacidad de interactuar directamente con el mapa para realizar análisis dinámicos:
+### Características principales:
 
-1.  **Selección de Nueva Ubicación**: Haz clic en cualquier punto del mapa en el **Módulo Mapa Principal**.
-2.  **Actualización Automática**:
-    *   El punto seleccionado se convierte en la nueva **sucursal** para el análisis del **Modelo Huff**.
-    *   El sistema buscará automáticamente los **5 negocios competidores más cercanos** a esa nueva ubicación utilizando la función `inegi_denue`.
-    *   El mapa y los análisis del Modelo Huff se actualizarán para reflejar esta nueva selección, permitiendo una evaluación rápida de múltiples escenarios de expansión.
+1. **Selección de Nueva Ubicación**: Haz clic en cualquier punto del mapa en el **Módulo Mapa Principal**.
+2. **Actualización Automática**:
+   - El punto seleccionado se convierte en la nueva **sucursal** para el análisis del **Modelo Huff**.
+   - El sistema buscará automáticamente los **5 negocios competidores más cercanos** a esa nueva ubicación.
+   - Los análisis se actualizarán para reflejar esta nueva selección.
 
-## Data Preparation
+### Navegación:
+- Usa la barra lateral para navegar entre módulos
+- Cada módulo tiene controles específicos y visualizaciones interactivas
+- Los resultados se mantienen en la sesión para análisis cruzado
 
-La aplicación utiliza datos pre-procesados que se generan mediante scripts ubicados en el directorio `utils/`. Es crucial ejecutar estos scripts si los datos base cambian o si se necesita regenerar los archivos de datos principales utilizados por la aplicación.
-
-Los scripts principales para la preparación de datos son:
-
-1.  **`utils/perfiles.R`**
-    *   **Propósito**: Realiza un Análisis de Componentes Principales (PCA) sobre datos censales para identificar y cuantificar perfiles de clientes. Estima el número de clientes potenciales por AGEB para cada perfil.
-    *   **Entrada**: Datos del censo a nivel AGEB. Ejemplo: `../data/CensoOaxaca/conjunto_de_datos/conjunto_de_datos_ageb_urbana_20_cpv2020.csv`. (Asegúrate que la ruta sea correcta y el archivo exista).
-    *   **Salida**: Un archivo RDS (`data/perfiles.rds`) que contiene los índices de perfiles de clientes y las estimaciones de clientes potenciales por AGEB.
-
-2.  **`utils/oaxaca_grid.R`**
-    *   **Propósito**: Genera la cuadrícula hexagonal principal utilizada en la aplicación. Agrega datos de población y los perfiles de clientes (del archivo `perfiles.rds`) a esta cuadrícula.
-    *   **Entradas**:
-        *   Shapefiles de AGEBs de Oaxaca (ej. `../data/agebs_oaxaca/conjunto_de_datos/*.shp`).
-        *   Datos de perfiles de clientes: `data/perfiles.rds` (generado por `utils/perfiles.R`).
-    *   **Salida**: El shapefile de la cuadrícula hexagonal (`data/Oaxaca_grid/oaxaca_ZMO_grid.shp`) que es cargado por la aplicación en `global.R`.
-
-**Importante**: Estos scripts (`perfiles.R` y `oaxaca_grid.R`) deben ejecutarse manualmente en la consola de R antes de iniciar la aplicación Shiny si los datos fuente han cambiado o si los archivos `data/perfiles.rds` o `data/Oaxaca_grid/oaxaca_ZMO_grid.shp` no existen o necesitan ser actualizados.
-
-## Configuración
-
-Para obtener la funcionalidad completa de la aplicación, especialmente aquella que interactúa con servicios externos, es necesario configurar claves API como variables de entorno.
+## Configuración de APIs
 
 ### Google Places API Key
 
-*   **Usada por**: El módulo de análisis de captación (`modules/mod_huff.R`), a través de la función `get_google_place_rating` en `utils/google_places.R`, para obtener calificaciones (ratings) de la competencia, que se utilizan como medida de atractivo en el modelo de Huff.
-*   **Variable de Entorno**: `GOOGLE_PLACES_API_KEY`
-*   **Instrucción**: Configure la variable de entorno `GOOGLE_PLACES_API_KEY` con su clave de API de Google Places.
-    *   Ejemplo en R: `Sys.setenv(GOOGLE_PLACES_API_KEY = "TU_API_KEY_AQUI")` (ejecutar antes de iniciar la app, o mejor aún, definirla en su `.Renviron`).
+- **Usada por**: Módulo de análisis de captación para obtener calificaciones de la competencia
+- **Variable de Entorno**: `GOOGLE_PLACES_API_KEY`
+- **Configuración**: 
+  ```bash
+  export GOOGLE_PLACES_API_KEY="TU_API_KEY_AQUI"
+  ```
 
 ### INEGI API Key
 
-*   **Usada por**: El módulo de mapa principal (`modules/mod_mapa.R`), a través de la función `inegi_denue` en `utils/inegi_denue.R`, para buscar negocios cercanos (DENUE).
-*   **Variable de Entorno**: `INEGI_API_KEY`
-*   **Instrucción**: Configure la variable de entorno `INEGI_API_KEY` con su clave de API de INEGI.
-    *   Ejemplo en R: `Sys.setenv(INEGI_API_KEY = "TU_API_KEY_AQUI")`
+- **Usada por**: Módulo de mapa principal para buscar negocios cercanos (DENUE)
+- **Variable de Entorno**: `INEGI_API_KEY`
+- **Configuración**:
+  ```bash
+  export INEGI_API_KEY="TU_API_KEY_AQUI"
+  ```
 
-**Nota sobre las Claves API**:
-Si estas claves API no están configuradas, los módulos correspondientes intentarán recurrir a datos simulados o tendrán una funcionalidad limitada. La aplicación mostrará notificaciones para indicar cuándo se están utilizando datos simulados debido a la ausencia de claves API.
+**Nota**: Si estas claves no están configuradas, la aplicación usará datos simulados con funcionalidad limitada.
+
+## Preparación de Datos
+
+La aplicación puede funcionar con:
+
+1. **Datos reales**: Shapefile de cuadrícula hexagonal en `data/Oaxaca_grid/oaxaca_ZMO_grid.shp`
+2. **Datos simulados**: Generados automáticamente si no se encuentran datos reales
+
+### Para usar datos reales:
+1. Coloca el shapefile de la cuadrícula hexagonal en `data/Oaxaca_grid/`
+2. Asegúrate de que contenga las columnas necesarias (ver `config.py`)
+
+## Tecnologías Utilizadas
+
+- **Streamlit**: Framework de aplicación web
+- **Folium**: Mapas interactivos
+- **Pandas/GeoPandas**: Manipulación de datos geoespaciales
+- **Scikit-learn**: Algoritmos de machine learning
+- **Plotly**: Visualizaciones interactivas
+- **Requests**: Llamadas a APIs externas
+
+## Diferencias con la versión R Shiny
+
+### Ventajas de la versión Streamlit:
+- **Más fácil de desplegar**: Streamlit Cloud, Heroku, etc.
+- **Mejor integración con ML**: Scikit-learn nativo
+- **Visualizaciones modernas**: Plotly integrado
+- **Desarrollo más rápido**: Menos código boilerplate
+- **Mejor manejo de sesiones**: Estado automático
+
+### Funcionalidades mejoradas:
+- **Análisis socioeconómico expandido**: Correlaciones, percentiles, calidad de datos
+- **Agente inteligente más avanzado**: Clustering, PCA, análisis predictivo
+- **Interfaz más moderna**: CSS personalizado, mejor UX
+- **Mejor manejo de errores**: Validaciones y fallbacks
+
+## Despliegue
+
+### Streamlit Cloud (Recomendado)
+1. Sube el código a GitHub
+2. Conecta con Streamlit Cloud
+3. Configura las variables de entorno en la interfaz web
+4. Despliega automáticamente
+
+### Docker
+```dockerfile
+FROM python:3.9-slim
+
+WORKDIR /app
+COPY requirements.txt .
+RUN pip install -r requirements.txt
+
+COPY . .
+
+EXPOSE 8501
+
+CMD ["streamlit", "run", "app.py", "--server.port=8501", "--server.address=0.0.0.0"]
+```
+
+### Heroku
+1. Crear `Procfile`:
+   ```
+   web: streamlit run app.py --server.port=$PORT --server.address=0.0.0.0
+   ```
+2. Configurar variables de entorno en Heroku
+3. Desplegar con Git
+
+## Contribución
+
+1. Fork el proyecto
+2. Crea una rama para tu feature (`git checkout -b feature/AmazingFeature`)
+3. Commit tus cambios (`git commit -m 'Add some AmazingFeature'`)
+4. Push a la rama (`git push origin feature/AmazingFeature`)
+5. Abre un Pull Request
+
+## Licencia
+
+Este proyecto está bajo la Licencia MIT - ver el archivo [LICENSE](LICENSE) para detalles.
+
+## Contacto
+
+Rosa Oliva Geoespacial - [contacto@rosaolivageoespacial.com](mailto:contacto@rosaolivageoespacial.com)
+
+Enlace del Proyecto: [https://github.com/tu-usuario/rosa-oliva-streamlit](https://github.com/tu-usuario/rosa-oliva-streamlit)

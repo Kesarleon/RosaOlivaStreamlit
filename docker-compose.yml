@@ -1,0 +1,19 @@
+version: '3.8'
+
+services:
+  rosa-oliva-app:
+    build: .
+    ports:
+      - "8501:8501"
+    environment:
+      - GOOGLE_PLACES_API_KEY=${GOOGLE_PLACES_API_KEY}
+      - INEGI_API_KEY=${INEGI_API_KEY}
+    volumes:
+      - ./data:/app/data
+      - ./www:/app/www
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8501/_stcore/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
